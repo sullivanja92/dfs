@@ -13,22 +13,22 @@ class TestDataFrameUtils(unittest.TestCase):
         }
         self.df = pd.DataFrame.from_dict(data)
 
-    def test_data_frame_to_dict(self):
-        actual = data_frame_utils.data_frame_to_dict(self.df, 'name', 'points')
+    def test_dict_from_data_frame_columns(self):
+        actual = data_frame_utils.dict_from_data_frame_columns(self.df, 'name', 'points')
         expected = {'Aaron Rodgers': 20.0, 'Aaron Jones': 15.9}
         self.assertDictEqual(actual, expected)
 
-    def test_data_frame_to_dict_missing_key_col(self):
-        self.assertRaises(ValueError, lambda: data_frame_utils.data_frame_to_dict(self.df, 'missing_key_col', 'points'))
+    def test_dict_from_data_frame_columns_missing_key_col(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.dict_from_data_frame_columns(self.df, 'missing_key_col', 'points'))
 
-    def test_data_frame_to_dict_missing_value_col(self):
-        self.assertRaises(ValueError, lambda: data_frame_utils.data_frame_to_dict(self.df, 'name', 'missing_value_col'))
+    def test_dict_from_data_frame_columns_missing_value_col(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.dict_from_data_frame_columns(self.df, 'name', 'missing_value_col'))
 
-    def test_data_frame_to_dict_none_key_col(self):
-        self.assertRaises(ValueError, lambda: data_frame_utils.data_frame_to_dict(self.df, None, 'points'))
+    def test_dict_from_data_frame_columns_none_key_col(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.dict_from_data_frame_columns(self.df, None, 'points'))
 
-    def test_data_frame_to_dict_none_value_col(self):
-        self.assertRaises(ValueError, lambda: data_frame_utils.data_frame_to_dict(self.df, 'name', None))
+    def test_dict_from_data_frame_columns_none_value_col(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.dict_from_data_frame_columns(self.df, 'name', None))
 
     def test_col_contains_all_values_true(self):
         self.assertTrue(data_frame_utils.col_contains_all_values(self.df, 'position', ['QB', 'RB']))

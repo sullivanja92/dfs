@@ -1,5 +1,5 @@
 
-def data_frame_to_dict(df, key_col, value_col):
+def dict_from_data_frame_columns(df, key_col, value_col):
     if key_col is None or key_col not in df.columns:
         raise ValueError(f"The column, {key_col}, is not found in data frame")
     if value_col is None or value_col not in df.columns:

@@ -3,6 +3,9 @@ from pygskin.common import LineupOptimizer
 
 class DraftKingsNflLineupOptimizer(LineupOptimizer):
 
+    def __init__(self, data):
+        super().__init__(data)
+
     def lineup_options(self):
         return [  # RB, WR or TE may be used for flex
             {'QB': 1, 'RB': 3, 'WR': 3, 'TE': 1, 'DST': 1},
@@ -19,6 +22,9 @@ class DraftKingsNflLineupOptimizer(LineupOptimizer):
 
 class FanDuelNflLineupOptimizer(LineupOptimizer):
 
+    def __init__(self, data):
+        super().__init__(data)
+
     def lineup_options(self):
         pass
 
@@ -27,13 +33,3 @@ class FanDuelNflLineupOptimizer(LineupOptimizer):
 
     def _problem_name(self):
         return 'FanDuel NFL'
-
-
-if __name__ == '__main__':
-    import pandas as pd
-    df = pd.read_excel('2019_nfl_stats.xlsx')
-    for i in range(0, 18):
-        week_df = df[df['week'] == i]
-        optimizer = DraftKingsNflLineupOptimizer()
-        optimizer.set_data(week_df)
-        optimizer.optimize_lineup()
