@@ -6,18 +6,23 @@ class DraftKingsNflLineupOptimizer(LineupOptimizer):
     def __init__(self, data):
         super().__init__(data)
 
-    def lineup_options(self):
-        return [  # RB, WR or TE may be used for flex
-            {'QB': 1, 'RB': 3, 'WR': 3, 'TE': 1, 'DST': 1},
-            {'QB': 1, 'RB': 2, 'WR': 4, 'TE': 1, 'DST': 1},
-            {'QB': 1, 'RB': 2, 'WR': 3, 'TE': 2, 'DST': 1}
-        ]
+    def position_constraints(self):
+        return {  # mapping of min/max-count tuples to position name
+            'QB': (1, 1),
+            'RB': (2, 3),
+            'WR': (3, 4),
+            'TE': (1, 2),
+            'DST': (1, 1)
+        }
+
+    def num_players(self):
+        return 9
 
     def salary_cap(self):
         return 50_000
 
     def _problem_name(self):
-        return 'DraftKings NFL'
+        return 'DraftKings NFL Optimized Lineup'
 
 
 class FanDuelNflLineupOptimizer(LineupOptimizer):
@@ -25,11 +30,14 @@ class FanDuelNflLineupOptimizer(LineupOptimizer):
     def __init__(self, data):
         super().__init__(data)
 
-    def lineup_options(self):
+    def position_constraints(self):
+        pass
+
+    def num_players(self):
         pass
 
     def salary_cap(self):
         pass
 
     def _problem_name(self):
-        return 'FanDuel NFL'
+        return 'FanDuel NFL Optimized Lineup'
