@@ -1,18 +1,16 @@
 from pygskin.common import LineupOptimizer
+from pygskin.positions import Position
 
 
 class DraftKingsNflLineupOptimizer(LineupOptimizer):
 
-    def __init__(self, data):
-        super().__init__(data)
-
     def position_constraints(self):
         return {  # mapping of min/max-count tuples to position name
-            'QB': (1, 1),
-            'RB': (2, 3),
-            'WR': (3, 4),
-            'TE': (1, 2),
-            'DST': (1, 1)
+            Position.QB: (1, 1),
+            Position.RB: (2, 3),
+            Position.WR: (3, 4),
+            Position.TE: (1, 2),
+            Position.DST: (1, 1)
         }
 
     def num_players(self):

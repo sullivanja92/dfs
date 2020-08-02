@@ -30,8 +30,20 @@ class TestDataFrameUtils(unittest.TestCase):
     def test_dict_from_data_frame_columns_none_value_col(self):
         self.assertRaises(ValueError, lambda: data_frame_utils.dict_from_data_frame_columns(self.df, 'name', None))
 
+    def test_contains_all_columns_true(self):
+        self.assertTrue(data_frame_utils.contains_all_columns(self.df, ['name', 'position', 'points']))
+
+    def test_contains_all_columns_false(self):
+        self.assertFalse(data_frame_utils.contains_all_columns(self.df, ['name', 'position', 'points', 'week']))
+
+    def test_contains_all_columns_none_df(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.contains_all_columns(None, []))
+
+    def test_contains_all_columns_none_cols(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.contains_all_columns(self.df, None))
+
     def test_col_contains_all_values_true(self):
         self.assertTrue(data_frame_utils.col_contains_all_values(self.df, 'position', ['QB', 'RB']))
 
     def test_col_contains_all_values_false(self):
-        self.assertTrue(data_frame_utils.col_contains_all_values(self.df, 'position', ['QB', 'RB', 'WR']))
+        self.assertFalse(data_frame_utils.col_contains_all_values(self.df, 'position', ['QB', 'RB', 'WR']))
