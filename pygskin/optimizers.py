@@ -19,8 +19,8 @@ class DraftKingsNflLineupOptimizer(LineupOptimizer):
     def salary_cap(self):
         return 50_000
 
-    def _problem_name(self):
-        return 'DraftKings NFL Optimized Lineup'
+    def site(self):
+        return 'DraftKings'
 
 
 class FanDuelNflLineupOptimizer(LineupOptimizer):
@@ -37,5 +37,5 @@ class FanDuelNflLineupOptimizer(LineupOptimizer):
     def salary_cap(self):
         pass
 
-    def _problem_name(self):
-        return 'FanDuel NFL Optimized Lineup'
+    def site(self):
+        return 'FanDuel'

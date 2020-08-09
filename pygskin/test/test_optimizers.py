@@ -1,5 +1,7 @@
-import pandas as pd
 import unittest
+
+import pandas as pd
+
 from pygskin.exceptions import InvalidDataFrameException
 from pygskin.optimizers import DraftKingsNflLineupOptimizer
 
@@ -13,7 +15,9 @@ class TestDraftKingsLineupOptimizer(unittest.TestCase):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
                                                  points_col='dk_points',
                                                  salary_col='dk_salary')
-        optimizer.optimize_lineup()  # TODO: assert
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(329.1, lineup.points)
+        self.assertEqual(46000, lineup.salary)
 
     def test_draft_kings_optimizer_missing_column(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1])
@@ -21,7 +25,7 @@ class TestDraftKingsLineupOptimizer(unittest.TestCase):
 
     def test_draft_kings_optimizer_with_different_format_positions(self):
         df = self.data.copy()
-        df = df[df['week'] == 1]
+        df = df[df['week'] == 2]
 
         def change_position(position):
             if position == 'QB':
@@ -36,7 +40,9 @@ class TestDraftKingsLineupOptimizer(unittest.TestCase):
                 return 'D/ST'
         df['position'] = df['position'].apply(lambda x: change_position(x))
         optimizer = DraftKingsNflLineupOptimizer(df, points_col='dk_points', salary_col='dk_salary')
-        optimizer.optimize_lineup()  # TODO: assert
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(260.62, lineup.points)
+        self.assertEqual(49300, lineup.salary)
 
     def test_draft_kings_optimizer_missing_positions(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['position'] != 'QB'])
