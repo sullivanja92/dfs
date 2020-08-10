@@ -1,7 +1,6 @@
 import unittest
 
-import pandas as pd
-
+from pygskin import data
 from pygskin.exceptions import InvalidDataFrameException
 from pygskin.optimizers import DraftKingsNflLineupOptimizer
 
@@ -9,7 +8,7 @@ from pygskin.optimizers import DraftKingsNflLineupOptimizer
 class TestDraftKingsLineupOptimizer(unittest.TestCase):
 
     def setUp(self):
-        self.data = pd.read_excel('../2019_nfl_stats.xlsx')
+        self.data = data.load_2019_data()
 
     def test_draft_kings_optimizer(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],

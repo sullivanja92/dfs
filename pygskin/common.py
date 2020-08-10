@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple
 
+import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
 from pygskin import positions
@@ -7,15 +9,37 @@ from pygskin.exceptions import InvalidDataFrameException
 from pygskin.util import data_frame_utils, pulp_utils
 
 
+class OptimizedLineup:
+
+    def __init__(self,
+                 site: str,
+                 points: float,
+                 salary: int,
+                 players: List[Dict[str, Any]],
+                 index: List[int]):
+        self.site = site
+        self.points = points
+        self.salary = salary
+        self.players = players
+        self.index = index
+
+    def __repr__(self):
+        return (f"pygskin.common.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
+                f"players={self.players}, index={self.index})")
+
+    def __str__(self):
+        return f"Points: {self.points} Salary: {self.salary} Players: {self.players}"
+
+
 class LineupOptimizer(ABC):
 
     def __init__(self,
-                 data,
-                 name_col='name',
-                 points_col='points',
-                 position_col='position',
-                 salary_col='salary',
-                 team_col='team'):
+                 data: pd.DataFrame,
+                 name_col: str = 'name',
+                 points_col: str = 'points',
+                 position_col: str = 'position',
+                 salary_col: str = 'salary',
+                 team_col: str = 'team'):
         self.data = data
         self.name_col = name_col
         self.points_col = points_col
@@ -23,7 +47,7 @@ class LineupOptimizer(ABC):
         self.salary_col = salary_col
         self.team_col = team_col
 
-    def optimize_lineup(self):
+    def optimize_lineup(self) -> OptimizedLineup:
         df = self.data.copy()
         if not data_frame_utils.contains_all_columns(df, [self.points_col, self.position_col, self.salary_col]):
             raise InvalidDataFrameException(('The data frame is missing a required column. '
@@ -60,7 +84,7 @@ class LineupOptimizer(ABC):
         print(repr(lineup))
         return lineup
 
-    def _normalize_data_frame(self, df):
+    def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         column_mapping = {self.name_col: 'name',
                           self.points_col: 'points',
                           self.position_col: 'position',
@@ -70,45 +94,25 @@ class LineupOptimizer(ABC):
         return df[['name', 'points', 'position', 'salary', 'team']]
 
     @abstractmethod
-    def position_constraints(self):
+    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
         pass
 
     @abstractmethod
-    def num_players(self):
+    def num_players(self) -> int:
         pass
 
     @abstractmethod
-    def salary_cap(self):
+    def salary_cap(self) -> int:
         pass
 
     @abstractmethod
-    def site(self):
+    def site(self) -> str:
         pass
 
 
-class OptimizedLineup:
-
-    def __init__(self, site, points, salary, players, index):
-        self.site = site
-        self.points = points
-        self.salary = salary
-        self.players = players
-        self.index = index
-
-    def __repr__(self):
-        return f"pygskin.common.LineupOptimizer(site={self.site}, points={self.points}, salary={self.salary}, players={self.players}, index={self.index})"
-
-    def __str__(self):
-        return f"Points: {self.points} Salary: {self.salary} Players: {self.players}"
-
-
-def parse_lineup_from_problem(problem, data, site):
+def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:
     index = [pulp_utils.index_from_lp_variable_name(p.name)
              for p in filter(lambda x: x.varValue == 1, problem.variables())]
-    for i in index:
-        print(data.loc[i])
-    print(index)
-    print(data.index)
     players = data.loc[index]
     points = players['points'].sum()
     salary = players['salary'].sum()

@@ -1,5 +1,6 @@
-from enum import Enum
 import re
+from enum import Enum
+from typing import Optional
 
 
 class Position(Enum):
@@ -10,7 +11,7 @@ class Position(Enum):
     DST = 'DST'
 
 
-def normalize_position(position):
+def normalize_position(position: str) -> Optional[Position]:
     if position is None:
         return None
     normalized = position.upper()  # uppercase
