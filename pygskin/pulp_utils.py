@@ -1,5 +1,5 @@
 
-def index_from_lp_variable_name(name: str, delimiter: str = '_') -> int:
+def int_index_from_lp_variable_name(name: str, delimiter: str = '_') -> int:
     if name is None or name == '':
         raise ValueError('Name must not be None or empty')
     if delimiter is None or delimiter not in name:

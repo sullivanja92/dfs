@@ -48,6 +48,9 @@ class LineupOptimizer(ABC):
 
     def optimize_lineup(self) -> OptimizedLineup:
         df = self.data.copy()
+        if not df.index.dtype == 'int64':
+            raise InvalidDataFrameException(('Only int64-type indices are currently supported. '
+                                            'Consider calling reset_index() on data frame'))
         if not data_frame_utils.contains_all_columns(df, [self.points_col, self.position_col, self.salary_col]):
             raise InvalidDataFrameException(('The data frame is missing a required column. '
                                              'Please add this or update column names'))
@@ -110,7 +113,7 @@ class LineupOptimizer(ABC):
 
 
 def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:
-    index = [pulp_utils.index_from_lp_variable_name(p.name)
+    index = [pulp_utils.int_index_from_lp_variable_name(p.name)
              for p in filter(lambda x: x.varValue == 1, problem.variables())]
     players = data.loc[index]
     points = players['points'].sum()

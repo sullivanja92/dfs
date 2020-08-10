@@ -46,3 +46,9 @@ class TestDraftKingsLineupOptimizer(unittest.TestCase):
     def test_draft_kings_optimizer_missing_positions(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['position'] != 'QB'])
         self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup())
+
+    def test_draft_kings_optimizer_non_int_index(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data.set_index('name'),
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup())
