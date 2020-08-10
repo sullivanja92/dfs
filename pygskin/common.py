@@ -4,9 +4,8 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
-from pygskin import positions
+from pygskin import positions, data_frame_utils, pulp_utils
 from pygskin.exceptions import InvalidDataFrameException
-from pygskin.util import data_frame_utils, pulp_utils
 
 
 class OptimizedLineup:

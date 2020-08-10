@@ -1,6 +1,6 @@
 import unittest
 
-from pygskin.util import pulp_utils
+from pygskin import pulp_utils
 
 
 class TestPulpUtils(unittest.TestCase):
