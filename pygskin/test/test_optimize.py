@@ -2,7 +2,7 @@ import unittest
 
 from pygskin import data
 from pygskin.exceptions import InvalidDataFrameException
-from pygskin.optimizers import DraftKingsNflLineupOptimizer
+from pygskin.optimize import DraftKingsNflLineupOptimizer
 
 
 class TestDraftKingsLineupOptimizer(unittest.TestCase):

@@ -112,6 +112,45 @@ class LineupOptimizer(ABC):
         pass
 
 
+class DraftKingsNflLineupOptimizer(LineupOptimizer):
+
+    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
+        return {  # mapping of min/max-count tuples to position name
+            positions.Position.QB: (1, 1),
+            positions.Position.RB: (2, 3),
+            positions.Position.WR: (3, 4),
+            positions.Position.TE: (1, 2),
+            positions.Position.DST: (1, 1)
+        }
+
+    def num_players(self) -> int:
+        return 9
+
+    def salary_cap(self) -> int:
+        return 50_000
+
+    def site(self) -> str:
+        return 'DraftKings'
+
+
+class FanDuelNflLineupOptimizer(LineupOptimizer):
+
+    def __init__(self, data):
+        super().__init__(data)
+
+    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
+        pass
+
+    def num_players(self) -> int:
+        pass
+
+    def salary_cap(self) -> int:
+        pass
+
+    def site(self) -> str:
+        return 'FanDuel'
+
+
 def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:
     index = [pulp_utils.int_index_from_lp_variable_name(p.name)
              for p in filter(lambda x: x.varValue == 1, problem.variables())]
