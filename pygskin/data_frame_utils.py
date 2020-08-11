@@ -1,4 +1,4 @@
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Iterable, Sequence
 
 import pandas as pd
 
@@ -9,7 +9,7 @@ def contains_all_columns(df: pd.DataFrame, columns: Sequence[str]) -> bool:
     return all([x in df.columns for x in columns])
 
 
-def col_contains_all_values(df: pd.DataFrame, col: str, values: Sequence[Any]) -> bool:
+def col_contains_all_values(df: pd.DataFrame, col: str, values: Iterable[Any]) -> bool:
     if col is None or col not in df.columns:
         raise ValueError(f"The column, {col}, must be found in data frame")
     return all(val in df[col].unique() for val in values)

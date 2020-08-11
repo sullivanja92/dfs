@@ -27,7 +27,10 @@ class OptimizedLineup:
                 f"players={self.players}, index={self.index})")
 
     def __str__(self):
-        return f"Points: {self.points} Salary: {self.salary} Players: {self.players}"
+        players_string = '\n'.join([f"{p['position'].value} - {p['name']} {p['points']} @ {p['salary']} salary"
+                                    for p in self.players])
+        return (f"Optimized {self.site} Lineup \n"
+                f"{self.points} points @ {self.salary} salary \n") + players_string
 
 
 class LineupOptimizer(ABC):
@@ -83,7 +86,7 @@ class LineupOptimizer(ABC):
         problem += lpSum(costs) <= self.salary_cap()
         problem.solve()
         lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), self.site())
-        print(repr(lineup))
+        print(lineup)
         return lineup
 
     def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
