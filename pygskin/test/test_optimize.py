@@ -52,3 +52,7 @@ class TestDraftKingsLineupOptimizer(unittest.TestCase):
                                                  points_col='dk_points',
                                                  salary_col='dk_salary')
         self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup())
+
+
+class TestFanDuelLineupOptimizer(unittest.TestCase):
+    pass

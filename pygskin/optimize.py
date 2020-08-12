@@ -5,7 +5,7 @@ import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
 from pygskin import positions, data_frame_utils, pulp_utils
-from pygskin.exceptions import InvalidDataFrameException
+from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException
 
 
 class OptimizedLineup:
@@ -118,7 +118,7 @@ class LineupOptimizer(ABC):
 class DraftKingsNflLineupOptimizer(LineupOptimizer):
 
     def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
-        return {  # mapping of min/max-count tuples to position name
+        return {
             positions.Position.QB: (1, 1),
             positions.Position.RB: (2, 3),
             positions.Position.WR: (3, 4),
@@ -142,19 +142,27 @@ class FanDuelNflLineupOptimizer(LineupOptimizer):
         super().__init__(data)
 
     def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
-        pass
+        return {
+            positions.Position.QB: (1, 1),
+            positions.Position.RB: (2, 3),
+            positions.Position.WR: (3, 4),
+            positions.Position.TE: (1, 2),
+            positions.Position.DST: (1, 1)
+        }
 
     def num_players(self) -> int:
-        pass
+        return 9
 
     def salary_cap(self) -> int:
-        pass
+        return 60_000
 
     def site(self) -> str:
         return 'FanDuel'
 
 
 def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:
+    if not pulp_utils.is_optimal_solution_found(problem):
+        raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
     index = [pulp_utils.int_index_from_lp_variable_name(p.name)
              for p in filter(lambda x: x.varValue == 1, problem.variables())]
     players = data.loc[index]
