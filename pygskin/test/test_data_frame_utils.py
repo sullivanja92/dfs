@@ -8,12 +8,11 @@ from pygskin import data_frame_utils
 class TestDataFrameUtils(unittest.TestCase):
 
     def setUp(self):
-        data = {
+        self.df = pd.DataFrame.from_dict(data={
             'name': ['Aaron Rodgers', 'Aaron Jones'],
             'position': ['QB', 'RB'],
             'points': [20.0, 15.9]
-        }
-        self.df = pd.DataFrame.from_dict(data)
+        })
 
     def test_contains_all_columns_true(self):
         self.assertTrue(data_frame_utils.contains_all_columns(self.df, ['name', 'position', 'points']))
