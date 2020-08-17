@@ -1,21 +1,20 @@
 from typing import List
 
-from numpy import nan
 import pandas as pd
+from numpy import nan
 
 
 def load_2019_data(weeks: List[int] = range(1, 5)) -> pd.DataFrame:
-    """This function is used to provide sample data from the 2019 season.
+    """
+    This function is used to provide sample data from the 2019 season.
 
     The return value is a DataFrame containing the following columns:
     name, position, year, week, team, opponent, dk_points, fd_points, dk_salary and fd_salary.
     Weeks one through four of the 2019 season are available.
 
-    Args:
-        weeks: The weeks to load fantasy data for.
-
-    Returns:
-        A DataFrame containing fantasy data for the given weeks.
+    :param weeks: The weeks to load fantasy data for.
+    :return: A DataFrame containing fantasy data for the given weeks.
+    :raises: A ValueError if weeks argument is invalid.
     """
     if weeks is None or len(weeks) == 0:
         raise ValueError('Weeks argument must not be none or empty')

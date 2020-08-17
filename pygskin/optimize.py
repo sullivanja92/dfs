@@ -23,7 +23,7 @@ class OptimizedLineup:
         self.index = index
 
     def __repr__(self):
-        return (f"pygskin.common.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
+        return (f"pygskin.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
                 f"players={self.players}, index={self.index})")
 
     def __str__(self):
