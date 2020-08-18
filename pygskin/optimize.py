@@ -5,6 +5,7 @@ import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
 from pygskin import positions, data_frame_utils, pulp_utils
+from pygskin.constraints import LineupConstraint, LineupSizeConstraint
 from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException
 
 
@@ -48,6 +49,7 @@ class LineupOptimizer(ABC):
         self.position_col = position_col
         self.salary_col = salary_col
         self.team_col = team_col
+        self.constraints = []
 
     def optimize_lineup(self) -> OptimizedLineup:
         df = self.data.copy()
@@ -62,32 +64,35 @@ class LineupOptimizer(ABC):
         if not data_frame_utils.col_contains_all_values(df, self.position_col, position_constraints.keys()):
             raise InvalidDataFrameException('Data frame is missing required positions. '
                                             f"Required: {position_constraints.keys()}")
-        df.dropna(subset=[self.points_col, self.salary_col], inplace=True)
-        salaries = {}  # name/salary dicts mapped to position
-        points = {}  # name/points dicts mapped to position
+        df.dropna(subset=[self.points_col, self.salary_col], inplace=True)  # TODO: include more columns?
+        salaries = {}  # index/salary dicts mapped to position
+        points = {}  # index/points dicts mapped to position
         for position in position_constraints.keys():
             players = df[df[self.position_col] == position]  # players for current position
             salaries[position] = data_frame_utils.map_index_to_col(players, self.salary_col)
             points[position] = data_frame_utils.map_index_to_col(players, self.points_col)
-        _vars = {k: LpVariable.dict(k.value, v, cat='Binary') for k, v in points.items()}
+        position_to_index_dict = {k: LpVariable.dict(k.value, v, cat='Binary') for k, v in points.items()}
         problem = LpProblem(f"{self.site()} Lineup Optimization", LpMaximize)
         costs, rewards = [], []
-        for k, v in _vars.items():
-            costs += lpSum([salaries[k][i] * _vars[k][i] for i in v])  # sum player salaries
-            rewards += lpSum([points[k][i] * _vars[k][i] for i in v])  # sum player points
+        for k, v in position_to_index_dict.items():
+            costs += lpSum([salaries[k][i] * position_to_index_dict[k][i] for i in v])  # sum player salaries
+            rewards += lpSum([points[k][i] * position_to_index_dict[k][i] for i in v])  # sum player points
             constraints_for_position = position_constraints[k]
-            problem += lpSum([_vars[k][i] for i in v]) >= constraints_for_position[0]  # min for position
-            problem += lpSum([_vars[k][i] for i in v]) <= constraints_for_position[1]  # max for position
-        total_players = []
-        for k, v in _vars.items():
-            total_players += lpSum([_vars[k][i] for i in v])
-        problem += lpSum(total_players) == self.num_players()
+            problem += lpSum([position_to_index_dict[k][i] for i in v]) >= constraints_for_position[0]
+            problem += lpSum([position_to_index_dict[k][i] for i in v]) <= constraints_for_position[1]
+        problem += LineupSizeConstraint(self.num_players(), position_to_index_dict).apply()
         problem += lpSum(rewards)
         problem += lpSum(costs) <= self.salary_cap()
         problem.solve()
         lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), self.site())
         print(lineup)
         return lineup
+
+    def add_constraint(self, constraint: LineupConstraint) -> None:
+        pass
+
+    def clear_constraints(self):
+        pass
 
     def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         column_mapping = {self.name_col: 'name',
@@ -137,9 +142,6 @@ class DraftKingsNflLineupOptimizer(LineupOptimizer):
 
 
 class FanDuelNflLineupOptimizer(LineupOptimizer):
-
-    def __init__(self, data):
-        super().__init__(data)
 
     def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
         return {
