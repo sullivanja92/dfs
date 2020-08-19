@@ -43,3 +43,18 @@ class TestDataFrameUtils(unittest.TestCase):
 
     def test_map_index_to_col_missing_column(self):
         self.assertRaises(ValueError, lambda: data_frame_utils.map_index_to_col(self.df, 'missing'))
+
+    def test_merge_dicts(self):
+        self.assertDictEqual({'a': 1, 'b': 2}, data_frame_utils.merge_dicts({'a': 1}, {'b': 2}))
+
+    def test_merge_dicts_overlap(self):
+        self.assertDictEqual({'a': 1, 'b': 2, 'c': 3}, data_frame_utils.merge_dicts({'a': 1, 'b': 2}, {'b': 2, 'c': 3}))
+
+    def test_merge_dicts_without_args(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.merge_dicts())
+
+    def test_merge_dicts_none_args(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.merge_dicts(None, None))
+
+    def test_merge_dicts_none_arg(self):
+        self.assertDictEqual({'a': 1, 'b': 2}, data_frame_utils.merge_dicts({'a': 1}, None, {'b': 2}))

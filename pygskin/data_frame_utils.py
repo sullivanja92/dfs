@@ -46,3 +46,17 @@ def map_index_to_col(df: pd.DataFrame, col: str) -> Dict[Any, Any]:
     if col is None or col not in df.columns:
         raise ValueError('The column must not be None and must be found in the data frame')
     return {i: df.loc[i][col] for i in df.index}
+
+
+def merge_dicts(*args: Dict) -> Dict[Any, Any]:
+    """
+    This function merges the provided dicts into a single dict.
+
+    :param args: The dicts to merge.
+    :return: The merged dict.
+    :raises: A ValueError if no non-none dicts are passed.
+    """
+    dicts = list(filter(lambda x: x is not None, args))
+    if len(dicts) == 0:
+        raise ValueError('No valid dicts to merge')
+    return {k: v for d in dicts for k, v in d.items()}

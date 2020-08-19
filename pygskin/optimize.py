@@ -5,7 +5,7 @@ import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
 from pygskin import positions, data_frame_utils, pulp_utils
-from pygskin.constraints import LineupConstraint, LineupSizeConstraint
+from pygskin import constraints
 from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException
 
 
@@ -73,22 +73,23 @@ class LineupOptimizer(ABC):
             points[position] = data_frame_utils.map_index_to_col(players, self.points_col)
         position_to_index_dict = {k: LpVariable.dict(k.value, v, cat='Binary') for k, v in points.items()}
         problem = LpProblem(f"{self.site()} Lineup Optimization", LpMaximize)
-        costs, rewards = [], []
+        rewards = []
         for k, v in position_to_index_dict.items():
-            costs += lpSum([salaries[k][i] * position_to_index_dict[k][i] for i in v])  # sum player salaries
             rewards += lpSum([points[k][i] * position_to_index_dict[k][i] for i in v])  # sum player points
             constraints_for_position = position_constraints[k]
             problem += lpSum([position_to_index_dict[k][i] for i in v]) >= constraints_for_position[0]
             problem += lpSum([position_to_index_dict[k][i] for i in v]) <= constraints_for_position[1]
-        problem += LineupSizeConstraint(self.num_players(), position_to_index_dict).apply()
+        index_to_variable_dict = data_frame_utils.merge_dicts(*position_to_index_dict.values())
+        index_to_salary_dict = data_frame_utils.merge_dicts(*salaries.values())
+        problem += constraints.LineupSizeConstraint(self.num_players(), index_to_variable_dict.values()).apply()
+        problem += constraints.SalaryCapConstraint(self.salary_cap(), index_to_variable_dict, index_to_salary_dict).apply()
         problem += lpSum(rewards)
-        problem += lpSum(costs) <= self.salary_cap()
         problem.solve()
         lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), self.site())
         print(lineup)
         return lineup
 
-    def add_constraint(self, constraint: LineupConstraint) -> None:
+    def add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         pass
 
     def clear_constraints(self):
