@@ -1,15 +1,18 @@
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
 from pygskin import positions, data_frame_utils, pulp_utils
 from pygskin import constraints
+from pygskin import sites
 from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException
 
 
 class OptimizedLineup:
+    """
+    A class that represents an optimized fantasy football lineup for a given site.
+    """
 
     def __init__(self,
                  site: str,
@@ -17,6 +20,13 @@ class OptimizedLineup:
                  salary: int,
                  players: List[Dict[str, Any]],
                  index: List[int]):
+        """
+        :param site: The fantasy football site name.
+        :param points: The points scored by the optimized lineup.
+        :param salary: The salary used by the lineup.
+        :param players: The players, represented as dicts, included in the lineup.
+        :param index: The indices of the lineup players in the original data frame.
+        """
         self.site = site
         self.points = points
         self.salary = salary
@@ -34,7 +44,12 @@ class OptimizedLineup:
                 f"{self.points} points @ {self.salary} salary \n") + players_string
 
 
-class LineupOptimizer(ABC):
+class LineupOptimizer:
+    """
+    A pandas data frame-based fantasy football lineup optimizer.
+    This class is used to generate optimal fantasy football lineups for various sites when provided
+    a data frame containing player, position, salary and points information.
+    """
 
     def __init__(self,
                  data: pd.DataFrame,
@@ -43,6 +58,14 @@ class LineupOptimizer(ABC):
                  position_col: str = 'position',
                  salary_col: str = 'salary',
                  team_col: str = 'team'):
+        """
+        :param data: The pandas data frame containing fantasy data.
+        :param name_col: The player name column. Default is 'name'.
+        :param points_col: The fantasy points column. Default is 'points'.
+        :param position_col: The player position column. Default is 'position'.
+        :param salary_col: The player salary column. Default is 'salary'.
+        :param team_col: The player team column. Default is 'team'.
+        """
         self.data = data
         self.name_col = name_col
         self.points_col = points_col
@@ -51,7 +74,21 @@ class LineupOptimizer(ABC):
         self.team_col = team_col
         self.constraints = []
 
-    def optimize_lineup(self) -> OptimizedLineup:
+    def optimize_lineup(self, site: Union[sites.Site, str]) -> OptimizedLineup:
+        """
+        Generates and returns an optimized lineup for a given fantasy football site.
+        The lineup is generated using the class's data variable and is optimized under provided constraints.
+
+        :param site: The fantasy site to generate a lineup for. Can be of type Site or str (full or abbreviation).
+        :return: The optimized lineup.
+        :raises: ValueError, InvalidDataFrameException
+        """
+        if (type(site) is str and site.lower() in ('draftkings', 'dk')) or site == sites.Site.DRAFTKINGS:
+            site = sites.Site.DRAFTKINGS
+        elif (type(site) is str and site.lower() in ('fanduel', 'fd')) or site == sites.Site.FANDUEL:
+            site = sites.Site.FANDUEL
+        else:
+            raise ValueError('The provided fantasy site is invalid')
         df = self.data.copy()
         if not df.index.dtype == 'int64':
             raise InvalidDataFrameException(('Only int64-type indices are currently supported. '
@@ -60,7 +97,7 @@ class LineupOptimizer(ABC):
             raise InvalidDataFrameException(('The data frame is missing a required column. '
                                              'Please add this or update column names'))
         df[self.position_col] = df[self.position_col].apply(lambda x: positions.normalize_position(x))
-        position_constraints = self.position_constraints()
+        position_constraints = site.position_constraints()
         if not data_frame_utils.col_contains_all_values(df, self.position_col, position_constraints.keys()):
             raise InvalidDataFrameException('Data frame is missing required positions. '
                                             f"Required: {position_constraints.keys()}")
@@ -72,7 +109,7 @@ class LineupOptimizer(ABC):
             salaries[position] = data_frame_utils.map_index_to_col(players, self.salary_col)
             points[position] = data_frame_utils.map_index_to_col(players, self.points_col)
         position_to_index_dict = {k: LpVariable.dict(k.value, v, cat='Binary') for k, v in points.items()}
-        problem = LpProblem(f"{self.site()} Lineup Optimization", LpMaximize)
+        problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
         rewards = []
         for k, v in position_to_index_dict.items():
             rewards += lpSum([points[k][i] * position_to_index_dict[k][i] for i in v])  # sum player points
@@ -81,19 +118,16 @@ class LineupOptimizer(ABC):
             problem += lpSum([position_to_index_dict[k][i] for i in v]) <= constraints_for_position[1]
         index_to_variable_dict = data_frame_utils.merge_dicts(*position_to_index_dict.values())
         index_to_salary_dict = data_frame_utils.merge_dicts(*salaries.values())
-        problem += constraints.LineupSizeConstraint(self.num_players(), index_to_variable_dict.values()).apply()
-        problem += constraints.SalaryCapConstraint(self.salary_cap(), index_to_variable_dict, index_to_salary_dict).apply()
+        problem += constraints.LineupSizeConstraint(site.num_players(),
+                                                    index_to_variable_dict.values()).apply()
+        problem += constraints.SalaryCapConstraint(site.salary_cap(),
+                                                   index_to_variable_dict,
+                                                   index_to_salary_dict).apply()
         problem += lpSum(rewards)
         problem.solve()
-        lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), self.site())
+        lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), site.name())
         print(lineup)
         return lineup
-
-    def add_constraint(self, constraint: constraints.LineupConstraint) -> None:
-        pass
-
-    def clear_constraints(self):
-        pass
 
     def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         column_mapping = {self.name_col: 'name',
@@ -104,66 +138,8 @@ class LineupOptimizer(ABC):
         df.rename(columns=column_mapping, inplace=True)
         return df[['name', 'points', 'position', 'salary', 'team']]
 
-    @abstractmethod
-    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
-        pass
 
-    @abstractmethod
-    def num_players(self) -> int:
-        pass
-
-    @abstractmethod
-    def salary_cap(self) -> int:
-        pass
-
-    @abstractmethod
-    def site(self) -> str:
-        pass
-
-
-class DraftKingsNflLineupOptimizer(LineupOptimizer):
-
-    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
-        return {
-            positions.Position.QB: (1, 1),
-            positions.Position.RB: (2, 3),
-            positions.Position.WR: (3, 4),
-            positions.Position.TE: (1, 2),
-            positions.Position.DST: (1, 1)
-        }
-
-    def num_players(self) -> int:
-        return 9
-
-    def salary_cap(self) -> int:
-        return 50_000
-
-    def site(self) -> str:
-        return 'DraftKings'
-
-
-class FanDuelNflLineupOptimizer(LineupOptimizer):
-
-    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
-        return {
-            positions.Position.QB: (1, 1),
-            positions.Position.RB: (2, 3),
-            positions.Position.WR: (3, 4),
-            positions.Position.TE: (1, 2),
-            positions.Position.DST: (1, 1)
-        }
-
-    def num_players(self) -> int:
-        return 9
-
-    def salary_cap(self) -> int:
-        return 60_000
-
-    def site(self) -> str:
-        return 'FanDuel'
-
-
-def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:
+def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:  # TODO: move this?
     if not pulp_utils.is_optimal_solution_found(problem):
         raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
     index = [pulp_utils.int_index_from_lp_variable_name(p.name)
