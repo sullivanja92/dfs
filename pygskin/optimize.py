@@ -3,10 +3,11 @@ from typing import Any, Dict, List, Union
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
-from pygskin import positions, data_frame_utils, pulp_utils
 from pygskin import constraints
+from pygskin import positions, data_frame_utils, pulp_utils
 from pygskin import sites
 from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException
+from pygskin.schedule import ScheduleType
 
 
 class OptimizedLineup:
@@ -28,7 +29,7 @@ class OptimizedLineup:
         :param index: The indices of the lineup players in the original data frame.
         """
         self.site = site
-        self.points = points
+        self.points = round(points, 2)
         self.salary = salary
         self.players = players
         self.index = index
@@ -57,7 +58,8 @@ class LineupOptimizer:
                  points_col: str = 'points',
                  position_col: str = 'position',
                  salary_col: str = 'salary',
-                 team_col: str = 'team'):
+                 team_col: str = 'team',
+                 datetime_col: str = 'datetime'):
         """
         :param data: The pandas data frame containing fantasy data.
         :param name_col: The player name column. Default is 'name'.
@@ -65,6 +67,7 @@ class LineupOptimizer:
         :param position_col: The player position column. Default is 'position'.
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
+        :param datetime_col: The game datetime column. Default is 'datetime'.
         """
         self.data = data
         self.name_col = name_col
@@ -72,14 +75,18 @@ class LineupOptimizer:
         self.position_col = position_col
         self.salary_col = salary_col
         self.team_col = team_col
+        self.datetime_col = datetime_col
         self.constraints = []
 
-    def optimize_lineup(self, site: Union[sites.Site, str]) -> OptimizedLineup:
+    def optimize_lineup(self,
+                        site: Union[sites.Site, str],
+                        schedule_type: ScheduleType = ScheduleType.ALL) -> OptimizedLineup:
         """
         Generates and returns an optimized lineup for a given fantasy football site.
         The lineup is generated using the class's data variable and is optimized under provided constraints.
 
         :param site: The fantasy site to generate a lineup for. Can be of type Site or str (full or abbreviation).
+        :param schedule_type: The schedule type to optimize lineup for. Default is ALL.
         :return: The optimized lineup.
         :raises: ValueError, InvalidDataFrameException
         """
@@ -102,6 +109,7 @@ class LineupOptimizer:
             raise InvalidDataFrameException('Data frame is missing required positions. '
                                             f"Required: {position_constraints.keys()}")
         df.dropna(subset=[self.points_col, self.salary_col], inplace=True)  # TODO: include more columns?
+        df = df[df[self.datetime_col].apply(lambda x: schedule_type.matches(x))]  # filter data based on schedule
         salaries = {}  # index/salary dicts mapped to position
         points = {}  # index/points dicts mapped to position
         for position in position_constraints.keys():
@@ -129,14 +137,15 @@ class LineupOptimizer:
         print(lineup)
         return lineup
 
-    def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:  # TODO: move this
         column_mapping = {self.name_col: 'name',
                           self.points_col: 'points',
                           self.position_col: 'position',
                           self.salary_col: 'salary',
-                          self.team_col: 'team'}
+                          self.team_col: 'team',
+                          self.datetime_col: 'datetime'}
         df.rename(columns=column_mapping, inplace=True)
-        return df[['name', 'points', 'position', 'salary', 'team']]
+        return df[['name', 'points', 'position', 'salary', 'team', 'datetime']]
 
 
 def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:  # TODO: move this?

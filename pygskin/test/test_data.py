@@ -28,3 +28,7 @@ class TestData(unittest.TestCase):
 
     def test_load_2019_data_empty_weeks(self):
         self.assertRaises(ValueError, lambda: data.load_2019_data([]))
+
+    def test_load_2019_data_columns(self):
+        self.assertListEqual(list(self.df.columns), ['name', 'position', 'year', 'week', 'datetime', 'team', 'opponent',
+                                                     'dk_salary', 'fd_salary', 'dk_points', 'fd_points'])

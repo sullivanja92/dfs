@@ -20,16 +20,16 @@ class TestLineupOptimizer(unittest.TestCase):
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         lineup = optimizer.optimize_lineup('DraftKings')
-        self.assertEqual(329.1, lineup.points)
-        self.assertEqual(46000, lineup.salary)
+        self.assertEqual(343.4, lineup.points)
+        self.assertEqual(48800, lineup.salary)
 
     def test_draftkings_optimizer_str_site_abbreviation(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         lineup = optimizer.optimize_lineup('DK')
-        self.assertEqual(329.1, lineup.points)
-        self.assertEqual(46000, lineup.salary)
+        self.assertEqual(343.4, lineup.points)
+        self.assertEqual(48800, lineup.salary)
 
     def test_fanduel_optimizer_str_site_full(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
@@ -52,8 +52,8 @@ class TestLineupOptimizer(unittest.TestCase):
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         lineup = optimizer.optimize_lineup(site=sites.Site.DRAFTKINGS)
-        self.assertEqual(329.1, lineup.points)
-        self.assertEqual(46000, lineup.salary)
+        self.assertEqual(343.4, lineup.points)
+        self.assertEqual(48800, lineup.salary)
 
     def test_draft_kings_optimizer_missing_column(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1])
@@ -77,8 +77,8 @@ class TestLineupOptimizer(unittest.TestCase):
         df['position'] = df['position'].apply(lambda x: change_position(x))
         optimizer = LineupOptimizer(df, points_col='dk_points', salary_col='dk_salary')
         lineup = optimizer.optimize_lineup(site=sites.Site.DRAFTKINGS)
-        self.assertEqual(260.62, lineup.points)
-        self.assertEqual(49300, lineup.salary)
+        self.assertEqual(290.52, lineup.points)
+        self.assertEqual(49900, lineup.salary)
 
     def test_draft_kings_optimizer_missing_positions(self):
         optimizer = LineupOptimizer(self.data[self.data['position'] != 'QB'])
