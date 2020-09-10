@@ -69,14 +69,78 @@ class LineupOptimizer:
         :param team_col: The player team column. Default is 'team'.
         :param datetime_col: The game datetime column. Default is 'datetime'.
         """
-        self.data = data
-        self.name_col = name_col
-        self.points_col = points_col
-        self.position_col = position_col
-        self.salary_col = salary_col
-        self.team_col = team_col
-        self.datetime_col = datetime_col
-        self.constraints = []
+        self._data = data
+        self._name_col = name_col
+        self._points_col = points_col
+        self._position_col = position_col
+        self._salary_col = salary_col
+        self._team_col = team_col
+        self._datetime_col = datetime_col
+
+    @property
+    def data(self):
+        return self._data
+
+    @property
+    def name_col(self):
+        return self._name_col
+
+    @name_col.setter
+    def name_col(self, value):
+        self._set_column_label('_name_col', value)
+
+    @property
+    def points_col(self):
+        return self._points_col
+
+    @points_col.setter
+    def points_col(self, value):
+        self._set_column_label('_points_col', value)
+
+    @property
+    def position_col(self):
+        return self._position_col
+
+    @position_col.setter
+    def position_col(self, value):
+        self._set_column_label('_position_col', value)
+
+    @property
+    def salary_col(self):
+        return self._salary_col
+
+    @salary_col.setter
+    def salary_col(self, value):
+        self._set_column_label('_salary_col', value)
+
+    @property
+    def team_col(self):
+        return self._team_col
+
+    @team_col.setter
+    def team_col(self, value):
+        self._set_column_label('_team_col', value)
+
+    @property
+    def datetime_col(self):
+        return self._datetime_col
+
+    @datetime_col.setter
+    def datetime_col(self, value):
+        self._set_column_label('_datetime_col', value)
+
+    def _set_column_label(self, property_name, column_label):
+        """
+        Helper method to set a required data frame column label.
+        The column presence is validated and then set using setattr.
+
+        :param property_name: The name of the data frame column property.
+        :param column_label: The column label.
+        :raises: ValueError if the column is missing from the data frame.
+        """
+        if column_label not in self.data.columns:
+            raise ValueError(f"The column label: {column_label} is not found in the data frame's columns")
+        setattr(self, property_name, column_label)
 
     def optimize_lineup(self,
                         site: Union[sites.Site, str],
@@ -96,11 +160,11 @@ class LineupOptimizer:
             site = sites.Site.FANDUEL
         else:
             raise ValueError('The provided fantasy site is invalid')
-        df = self.data.copy()
+        df = self._data.copy()
         if not df.index.dtype == 'int64':
             raise InvalidDataFrameException(('Only int64-type indices are currently supported. '
                                             'Consider calling reset_index() on data frame'))
-        if not data_frame_utils.contains_all_columns(df, [self.points_col, self.position_col, self.salary_col]):
+        if not data_frame_utils.contains_all_columns(df, [self._points_col, self.position_col, self.salary_col]):
             raise InvalidDataFrameException(('The data frame is missing a required column. '
                                              'Please add this or update column names'))
         df[self.position_col] = df[self.position_col].apply(lambda x: positions.normalize_position(x))
@@ -108,14 +172,14 @@ class LineupOptimizer:
         if not data_frame_utils.col_contains_all_values(df, self.position_col, position_constraints.keys()):
             raise InvalidDataFrameException('Data frame is missing required positions. '
                                             f"Required: {position_constraints.keys()}")
-        df.dropna(subset=[self.points_col, self.salary_col], inplace=True)  # TODO: include more columns?
+        df.dropna(subset=[self._points_col, self.salary_col], inplace=True)  # TODO: include more columns?
         df = df[df[self.datetime_col].apply(lambda x: schedule_type.matches(x))]  # filter data based on schedule
         salaries = {}  # index/salary dicts mapped to position
         points = {}  # index/points dicts mapped to position
         for position in position_constraints.keys():
             players = df[df[self.position_col] == position]  # players for current position
             salaries[position] = data_frame_utils.map_index_to_col(players, self.salary_col)
-            points[position] = data_frame_utils.map_index_to_col(players, self.points_col)
+            points[position] = data_frame_utils.map_index_to_col(players, self._points_col)
         position_to_index_dict = {k: LpVariable.dict(k.value, v, cat='Binary') for k, v in points.items()}
         problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
         rewards = []
@@ -134,12 +198,11 @@ class LineupOptimizer:
         problem += lpSum(rewards)
         problem.solve()
         lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), site.name())
-        print(lineup)
         return lineup
 
     def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:  # TODO: move this
         column_mapping = {self.name_col: 'name',
-                          self.points_col: 'points',
+                          self._points_col: 'points',
                           self.position_col: 'position',
                           self.salary_col: 'salary',
                           self.team_col: 'team',
