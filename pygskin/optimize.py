@@ -144,7 +144,7 @@ class LineupOptimizer:
 
     def optimize_lineup(self,
                         site: Union[sites.Site, str],
-                        schedule_type: ScheduleType = ScheduleType.ALL) -> OptimizedLineup:
+                        schedule_type: ScheduleType = None) -> OptimizedLineup:
         """
         Generates and returns an optimized lineup for a given fantasy football site.
         The lineup is generated using the class's data variable and is optimized under provided constraints.
@@ -163,7 +163,7 @@ class LineupOptimizer:
         df = self._data.copy()
         if not df.index.dtype == 'int64':
             raise InvalidDataFrameException(('Only int64-type indices are currently supported. '
-                                            'Consider calling reset_index() on data frame'))
+                                             'Consider calling reset_index() on data frame'))
         if not data_frame_utils.contains_all_columns(df, [self._points_col, self.position_col, self.salary_col]):
             raise InvalidDataFrameException(('The data frame is missing a required column. '
                                              'Please add this or update column names'))
@@ -173,7 +173,8 @@ class LineupOptimizer:
             raise InvalidDataFrameException('Data frame is missing required positions. '
                                             f"Required: {position_constraints.keys()}")
         df.dropna(subset=[self._points_col, self.salary_col], inplace=True)  # TODO: include more columns?
-        df = df[df[self.datetime_col].apply(lambda x: schedule_type.matches(x))]  # filter data based on schedule
+        if schedule_type is not None:
+            df = df[df[self.datetime_col].apply(lambda x: schedule_type.matches(x))]  # filter data based on schedule
         salaries = {}  # index/salary dicts mapped to position
         points = {}  # index/points dicts mapped to position
         for position in position_constraints.keys():
@@ -197,18 +198,16 @@ class LineupOptimizer:
                                                    index_to_salary_dict).apply()
         problem += lpSum(rewards)
         problem.solve()
-        lineup = parse_lineup_from_problem(problem, self._normalize_data_frame(df), site.name())
+        column_mappings = {self.name_col: 'name',
+                           self._points_col: 'points',
+                           self.position_col: 'position',
+                           self.salary_col: 'salary',
+                           self.team_col: 'team',
+                           self.datetime_col: 'datetime'}
+        lineup = parse_lineup_from_problem(problem,
+                                           data_frame_utils.map_cols_and_filter_by_values(df, column_mappings),
+                                           site.name())
         return lineup
-
-    def _normalize_data_frame(self, df: pd.DataFrame) -> pd.DataFrame:  # TODO: move this
-        column_mapping = {self.name_col: 'name',
-                          self._points_col: 'points',
-                          self.position_col: 'position',
-                          self.salary_col: 'salary',
-                          self.team_col: 'team',
-                          self.datetime_col: 'datetime'}
-        df.rename(columns=column_mapping, inplace=True)
-        return df[['name', 'points', 'position', 'salary', 'team', 'datetime']]
 
 
 def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:  # TODO: move this?

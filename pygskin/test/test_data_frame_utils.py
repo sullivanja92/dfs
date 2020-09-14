@@ -58,3 +58,16 @@ class TestDataFrameUtils(unittest.TestCase):
 
     def test_merge_dicts_none_arg(self):
         self.assertDictEqual({'a': 1, 'b': 2}, data_frame_utils.merge_dicts({'a': 1}, None, {'b': 2}))
+
+    def test_map_cols_and_filter_by_values(self):
+        actual = data_frame_utils.map_cols_and_filter_by_values(self.df, {'name': 'n'})
+        self.assertListEqual(list(actual.columns), ['n'])
+        self.assertEqual(len(actual), 2)
+        self.assertEqual(len(actual[actual['n'] == 'Aaron Rodgers']), 1)
+        self.assertEqual(len(actual[actual['n'] == 'Aaron Jones']), 1)
+
+    def test_map_cols_and_filter_by_values_none_df(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.map_cols_and_filter_by_values(None, {}))
+
+    def test_map_cols_and_filter_by_values_none_mappings(self):
+        self.assertRaises(ValueError, lambda: data_frame_utils.map_cols_and_filter_by_values(self.df, None))

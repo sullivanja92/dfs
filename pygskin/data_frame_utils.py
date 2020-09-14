@@ -60,3 +60,18 @@ def merge_dicts(*args: Dict) -> Dict[Any, Any]:
     if len(dicts) == 0:
         raise ValueError('No valid dicts to merge')
     return {k: v for d in dicts for k, v in d.items()}
+
+
+def map_cols_and_filter_by_values(df: pd.DataFrame, column_mapping: Dict[str, str]) -> pd.DataFrame:
+    """
+    Renames a data frame's columns and returns the data frame filtered by updated column names.
+
+    :param df: The data frame.
+    :param column_mapping: The mapping of column names to update.
+    :return: The filtered data frame.
+    :raises: ValueError if either argument is None.
+    """
+    if df is None or column_mapping is None:
+        raise ValueError('Data frame and column mapping arguments must not be none')
+    df.rename(columns=column_mapping, inplace=True)
+    return df[column_mapping.values()]
