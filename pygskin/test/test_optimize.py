@@ -106,5 +106,32 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.only_include_teams(None)
         with self.assertRaises(ValueError):
             optimizer.only_include_teams([])
-        optimizer.only_include_teams(['ATL', 'CAR', 'NO', 'TB'])
-        optimizer.optimize_lineup(site='dk')
+        teams = ['ATL', 'CAR', 'NO', 'TB']
+        optimizer.only_include_teams(teams)
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue(all([x['team'] in teams for x in lineup.players]))
+
+    def test_exclude_teams_constraint(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        with self.assertRaises(ValueError):
+            optimizer.exclude_teams(None)
+        with self.assertRaises(ValueError):
+            optimizer.exclude_teams([])
+        teams = ['DAL', 'CAR']
+        optimizer.exclude_teams(teams)  # should exclude Dak Prescott & Christian McCaffrey
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue(all([x['team'] not in teams for x in lineup.players]))
+
+    def test_clear_constraints(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        teams = ['DAL', 'CAR']
+        optimizer.exclude_teams(teams)  # should exclude Dak Prescott & Christian McCaffrey
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue(all([x['team'] not in teams for x in lineup.players]))
+        optimizer.clear_constraints()
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue(all([t in [x['team'] for x in lineup.players] for t in teams]))

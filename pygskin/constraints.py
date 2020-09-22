@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, List
 
+import pandas as pd
 from pulp import LpProblem, LpVariable, lpSum
 
 from pygskin import data_frame_utils
@@ -77,13 +78,13 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):
     A constraint used to only consider players for a list of teams.
     """
 
-    def __init__(self, teams_to_include, data, team_column):
+    def __init__(self, teams: List[str], data: pd.DataFrame, team_column: str):
         """
-        :param teams_to_include: The list of teams to consider.
+        :param teams: The list of teams to consider.
         :param data: The player data frame.
         :param team_column: The data frame's team column label.
         """
-        self.teams_to_include = teams_to_include
+        self.teams = teams
         self.data = data
         self.team_column = team_column
 
@@ -97,5 +98,34 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):
         """
         index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_column)
         for k, v in index_to_lp_variable_dict.items():
-            if index_to_team_dict[k] not in self.teams_to_include:
+            if index_to_team_dict[k] not in self.teams:
+                problem += v == 0
+
+
+class ExcludeTeamsConstraint(LineupConstraint):
+    """
+    A constraint used to exclude players who play for specified teams.
+    """
+
+    def __init__(self, teams: List[str], data: pd.DataFrame, team_column: str):
+        """
+        :param teams: The list of teams to exclude from consideration.
+        :param data: The player data frame.
+        :param team_column: The data frame's team column label.
+        """
+        self.teams = teams
+        self.data = data
+        self.team_column = team_column
+
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
+        """
+        Checks that players who play for one of the specified teams are not included in the lineup.
+
+        :param problem: The LP Problem variable for which to apply the rule.
+        :param index_to_lp_variable_dict: The player index to lp variable mapping.
+        :return: None
+        """
+        index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_column)
+        for k, v in index_to_lp_variable_dict.items():
+            if index_to_team_dict[k] in self.teams:
                 problem += v == 0

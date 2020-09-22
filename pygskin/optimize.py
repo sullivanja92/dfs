@@ -108,16 +108,37 @@ class LineupOptimizer:
     def datetime_col(self):
         return self._datetime_col
 
-    def only_include_teams(self, teams: List[str]):
+    def only_include_teams(self, teams: List[str]) -> None:
         """
         Sets the teams that are to be considered for the lineup optimization.
 
         :param teams: The list of teams to consider.
+        :return: None
         :raises: ValueError if teams to include is none or empty.
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Included teams must not be none or empty')
         self._constraints.append(constraints.OnlyIncludeTeamsConstraint(teams, self._data, self._team_col))
+
+    def exclude_teams(self, teams: List[str]) -> None:
+        """
+        Sets the list of teams whose players are to be excluded from lineup optimization.
+
+        :param teams: The list of teams to exclude.
+        :return: None
+        :raises: ValueError if teams to exclude is none or empty.
+        """
+        if teams is None or len(teams) == 0:
+            raise ValueError('Teams to exclude must not be none or empty')
+        self._constraints.append(constraints.ExcludeTeamsConstraint(teams, self._data, self._team_col))
+
+    def clear_constraints(self) -> None:
+        """
+        Clears the current lineup optimizer constraints.
+
+        :return: None
+        """
+        self._constraints = []
 
     def optimize_lineup(self,
                         site: Union[sites.Site, str],
