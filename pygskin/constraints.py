@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Iterable
+from typing import Dict
 
-from pulp import LpAffineExpression, LpVariable, lpSum
+from pulp import LpProblem, LpVariable, lpSum
+
+from pygskin import data_frame_utils
 
 
 class LineupConstraint(ABC):
@@ -10,11 +12,13 @@ class LineupConstraint(ABC):
     """
 
     @abstractmethod
-    def apply(self) -> LpAffineExpression:
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
         """
         Applies the given constraint with args provided in constructor.
 
-        :return: An LpAffineExpression to add to the pulp problem.
+        :param problem: The LP Problem variable for which to apply the rule.
+        :param index_to_lp_variable_dict: The player index to lp variable mapping.
+        :return: None
         """
         pass
 
@@ -24,21 +28,21 @@ class LineupSizeConstraint(LineupConstraint):
     A constraint based on the number of players allowed in a lineup.
     """
 
-    def __init__(self, size: int, lp_variables: Iterable[LpVariable]):
+    def __init__(self, size: int):
         """
         :param size: The size of the lineup
-        :param lp_variables: The lp variables
         """
         self.size = size
-        self.lp_variables = lp_variables
 
-    def apply(self) -> LpAffineExpression:
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
         """
         Takes the sum of players included in a lineup and returns whether that is equal to the required lineup size.
 
-        :return: The LpAffineExpression representing valid lineup size to be added to the pulp problem.
+        :param problem: The LP Problem variable for which to apply the rule.
+        :param index_to_lp_variable_dict: The player index to lp variable mapping.
+        :return: None
         """
-        return lpSum(self.lp_variables) == self.size
+        problem += lpSum(index_to_lp_variable_dict.values()) == self.size
 
 
 class SalaryCapConstraint(LineupConstraint):
@@ -47,23 +51,51 @@ class SalaryCapConstraint(LineupConstraint):
     """
 
     def __init__(self, salary_cap: int,
-                 index_to_variable_dict: Dict[int, LpVariable],
                  index_to_salary_dict: Dict[int, int]):
         """
         :param salary_cap: The salary cap.
-        :param index_to_variable_dict: A dict containing index to lp variable mappings.
         :param index_to_salary_dict:  A dict containing index to salary mappings.
         """
         self.salary_cap = salary_cap
-        self.index_to_variable_dict = index_to_variable_dict
         self.index_to_salary_dict = index_to_salary_dict
 
-    def apply(self) -> LpAffineExpression:
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
         """
         Takes the sum of included player salaries and compares that to the salary cap.
 
-        :return: The LpAffineExpression representing valid lineup salary to be added to the pulp problem.
+        :param problem: The LP Problem variable for which to apply the rule.
+        :param index_to_lp_variable_dict: The player index to lp variable mapping.
+        :return: None
         """
-        costs = [self.index_to_salary_dict[i] * self.index_to_variable_dict[i]
-                 for i in self.index_to_variable_dict.keys()]
-        return lpSum(costs) <= self.salary_cap
+        costs = [self.index_to_salary_dict[i] * index_to_lp_variable_dict[i]
+                 for i in index_to_lp_variable_dict.keys()]
+        problem += lpSum(costs) <= self.salary_cap
+
+
+class OnlyIncludeTeamsConstraint(LineupConstraint):
+    """
+    A constraint used to only consider players for a list of teams.
+    """
+
+    def __init__(self, teams_to_include, data, team_column):
+        """
+        :param teams_to_include: The list of teams to consider.
+        :param data: The player data frame.
+        :param team_column: The data frame's team column label.
+        """
+        self.teams_to_include = teams_to_include
+        self.data = data
+        self.team_column = team_column
+
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
+        """
+        Checks that players who do not play for one of the specified teams are not included in the lineup.
+
+        :param problem: The LP Problem variable for which to apply the rule.
+        :param index_to_lp_variable_dict: The player index to lp variable mapping.
+        :return: None
+        """
+        index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_column)
+        for k, v in index_to_lp_variable_dict.items():
+            if index_to_team_dict[k] not in self.teams_to_include:
+                problem += v == 0

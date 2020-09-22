@@ -11,24 +11,9 @@ class TestLineupOptimizer(unittest.TestCase):
     def setUp(self):
         self.data = data.load_2019_data()
 
-    def test_set_column_labels(self):
-        optimizer = LineupOptimizer(self.data[self.data['week'] == 1])
-        self.assertEqual('points', optimizer.points_col)
-        optimizer.points_col = 'dk_points'
-        self.assertEqual('dk_points', optimizer.points_col)
-
     def test_optimizer_setting_missing_column(self):
-        optimizer = LineupOptimizer(self.data[self.data['week'] == 1])
         with self.assertRaises(ValueError):
-            optimizer.name_col = 'missing'
-
-    def test_optimizer_setting_column_labels(self):
-        optimizer = LineupOptimizer(self.data[self.data['week'] == 1])
-        optimizer.points_col = 'dk_points'
-        optimizer.salary_col = 'dk_salary'
-        lineup = optimizer.optimize_lineup('DraftKings')
-        self.assertEqual(343.4, lineup.points)
-        self.assertEqual(48800, lineup.salary)
+            LineupOptimizer(self.data[self.data['week'] == 1], name_col='missing')
 
     def test_optimizer_with_invalid_site(self):
         self.assertRaises(ValueError,
@@ -75,8 +60,7 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(48800, lineup.salary)
 
     def test_draft_kings_optimizer_missing_column(self):
-        optimizer = LineupOptimizer(self.data[self.data['week'] == 1])
-        self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup(site=Site.DRAFTKINGS))
+        self.assertRaises(ValueError, lambda: LineupOptimizer(self.data[self.data['week'] == 1]))
 
     def test_draft_kings_optimizer_with_different_format_positions(self):
         df = self.data.copy()
@@ -101,11 +85,26 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(49900, lineup.salary)
 
     def test_draft_kings_optimizer_missing_positions(self):
-        optimizer = LineupOptimizer(self.data[self.data['position'] != 'QB'])
-        self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup(site=Site.DRAFTKINGS))
-
-    def test_draft_kings_optimizer_non_int_index(self):
-        optimizer = LineupOptimizer(self.data.set_index('name'),
+        optimizer = LineupOptimizer(self.data[self.data['position'] != 'QB'],
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup(site=Site.DRAFTKINGS))
+
+    def test_draft_kings_optimizer_non_int_index(self):
+        df = self.data.copy()
+        df.index = df.index.map(str)
+        optimizer = LineupOptimizer(df,
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup(site=Site.DRAFTKINGS))
+
+    def test_only_include_teams_constraint(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 2],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        with self.assertRaises(ValueError):
+            optimizer.only_include_teams(None)
+        with self.assertRaises(ValueError):
+            optimizer.only_include_teams([])
+        optimizer.only_include_teams(['ATL', 'CAR', 'NO', 'TB'])
+        optimizer.optimize_lineup(site='dk')

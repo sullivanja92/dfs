@@ -70,12 +70,15 @@ class LineupOptimizer:
         :param datetime_col: The game datetime column. Default is 'datetime'.
         """
         self._data = data
+        if not all(c in data.columns for c in [name_col, points_col, position_col, salary_col, team_col, datetime_col]):
+            raise ValueError('DataFrame does not contain necessary columns')
         self._name_col = name_col
         self._points_col = points_col
         self._position_col = position_col
         self._salary_col = salary_col
         self._team_col = team_col
         self._datetime_col = datetime_col
+        self._constraints = []
 
     @property
     def data(self):
@@ -85,62 +88,36 @@ class LineupOptimizer:
     def name_col(self):
         return self._name_col
 
-    @name_col.setter
-    def name_col(self, value):
-        self._set_column_label('_name_col', value)
-
     @property
     def points_col(self):
         return self._points_col
-
-    @points_col.setter
-    def points_col(self, value):
-        self._set_column_label('_points_col', value)
 
     @property
     def position_col(self):
         return self._position_col
 
-    @position_col.setter
-    def position_col(self, value):
-        self._set_column_label('_position_col', value)
-
     @property
     def salary_col(self):
         return self._salary_col
-
-    @salary_col.setter
-    def salary_col(self, value):
-        self._set_column_label('_salary_col', value)
 
     @property
     def team_col(self):
         return self._team_col
 
-    @team_col.setter
-    def team_col(self, value):
-        self._set_column_label('_team_col', value)
-
     @property
     def datetime_col(self):
         return self._datetime_col
 
-    @datetime_col.setter
-    def datetime_col(self, value):
-        self._set_column_label('_datetime_col', value)
-
-    def _set_column_label(self, property_name, column_label):
+    def only_include_teams(self, teams: List[str]):
         """
-        Helper method to set a required data frame column label.
-        The column presence is validated and then set using setattr.
+        Sets the teams that are to be considered for the lineup optimization.
 
-        :param property_name: The name of the data frame column property.
-        :param column_label: The column label.
-        :raises: ValueError if the column is missing from the data frame.
+        :param teams: The list of teams to consider.
+        :raises: ValueError if teams to include is none or empty.
         """
-        if column_label not in self.data.columns:
-            raise ValueError(f"The column label: {column_label} is not found in the data frame's columns")
-        setattr(self, property_name, column_label)
+        if teams is None or len(teams) == 0:
+            raise ValueError('Included teams must not be none or empty')
+        self._constraints.append(constraints.OnlyIncludeTeamsConstraint(teams, self._data, self._team_col))
 
     def optimize_lineup(self,
                         site: Union[sites.Site, str],
@@ -191,12 +168,11 @@ class LineupOptimizer:
             problem += lpSum([position_to_index_dict[k][i] for i in v]) <= constraints_for_position[1]
         index_to_variable_dict = data_frame_utils.merge_dicts(*position_to_index_dict.values())
         index_to_salary_dict = data_frame_utils.merge_dicts(*salaries.values())
-        problem += constraints.LineupSizeConstraint(site.num_players(),
-                                                    index_to_variable_dict.values()).apply()
-        problem += constraints.SalaryCapConstraint(site.salary_cap(),
-                                                   index_to_variable_dict,
-                                                   index_to_salary_dict).apply()
+        constraints.LineupSizeConstraint(site.num_players()).apply(problem, index_to_variable_dict)
+        constraints.SalaryCapConstraint(site.salary_cap(), index_to_salary_dict).apply(problem, index_to_variable_dict)
         problem += lpSum(rewards)
+        for constraint in self._constraints:
+            constraint.apply(problem, index_to_variable_dict)
         problem.solve()
         column_mappings = {self.name_col: 'name',
                            self._points_col: 'points',
