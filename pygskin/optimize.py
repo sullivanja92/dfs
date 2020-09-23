@@ -6,7 +6,7 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 from pygskin import constraints
 from pygskin import positions, data_frame_utils, pulp_utils
 from pygskin import sites
-from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException
+from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from pygskin.schedule import ScheduleType
 
 
@@ -118,7 +118,7 @@ class LineupOptimizer:
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Included teams must not be none or empty')
-        self._constraints.append(constraints.OnlyIncludeTeamsConstraint(teams, self._data, self._team_col))
+        self._add_constraint(constraints.OnlyIncludeTeamsConstraint(teams, self._data, self._team_col))
 
     def exclude_teams(self, teams: List[str]) -> None:
         """
@@ -130,7 +130,20 @@ class LineupOptimizer:
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Teams to exclude must not be none or empty')
-        self._constraints.append(constraints.ExcludeTeamsConstraint(teams, self._data, self._team_col))
+        self._add_constraint(constraints.ExcludeTeamsConstraint(teams, self._data, self._team_col))
+
+    def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
+        """
+        Internal method used to add a constraint by first checking if it is valid.
+
+        :param constraint: The constraint to add.
+        :return: None
+        :raises: InvalidConstraintException if the constraint is not valid
+        """
+        if constraint.is_valid(self._constraints):
+            self._constraints.append(constraint)
+        else:
+            raise InvalidConstraintException(f"The {str(type(constraint))} constraint is not valid")
 
     def clear_constraints(self) -> None:
         """

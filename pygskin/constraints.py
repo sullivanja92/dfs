@@ -23,6 +23,16 @@ class LineupConstraint(ABC):
         """
         pass
 
+    @abstractmethod
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        """
+        Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
+
+        :param constraints: The list of constraints to validate against.
+        :return: A bool indicating whether the lineup can be added.
+        """
+        pass
+
 
 class LineupSizeConstraint(LineupConstraint):
     """
@@ -44,6 +54,16 @@ class LineupSizeConstraint(LineupConstraint):
         :return: None
         """
         problem += lpSum(index_to_lp_variable_dict.values()) == self.size
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        """
+        Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
+        This will always return True.
+
+        :param constraints: The list of constraints to validate against.
+        :return: A bool indicating whether the lineup can be added.
+        """
+        return True
 
 
 class SalaryCapConstraint(LineupConstraint):
@@ -71,6 +91,16 @@ class SalaryCapConstraint(LineupConstraint):
         costs = [self.index_to_salary_dict[i] * index_to_lp_variable_dict[i]
                  for i in index_to_lp_variable_dict.keys()]
         problem += lpSum(costs) <= self.salary_cap
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        """
+        Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
+        This will always return True.
+
+        :param constraints: The list of constraints to validate against.
+        :return: A bool indicating whether the lineup can be added.
+        """
+        return True
 
 
 class OnlyIncludeTeamsConstraint(LineupConstraint):
@@ -101,6 +131,20 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):
             if index_to_team_dict[k] not in self.teams:
                 problem += v == 0
 
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        """
+        Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
+        This method will check whether any constraints exist which exclude a team that is to be considered.
+
+        :param constraints: The list of constraints to validate against.
+        :return: A bool indicating whether the lineup can be added.
+        """
+        for constraint in constraints:
+            if type(constraint) is ExcludeTeamsConstraint:
+                if any([t in constraint.teams for t in self.teams]):  # check if any teams to consider are excluded
+                    return False
+        return True
+
 
 class ExcludeTeamsConstraint(LineupConstraint):
     """
@@ -129,3 +173,17 @@ class ExcludeTeamsConstraint(LineupConstraint):
         for k, v in index_to_lp_variable_dict.items():
             if index_to_team_dict[k] in self.teams:
                 problem += v == 0
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        """
+        Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
+        This method will check whether any constraints exist which include a team that is to be excluded.
+
+        :param constraints: The list of constraints to validate against.
+        :return: A bool indicating whether the lineup can be added.
+        """
+        for constraint in constraints:
+            if type(constraint) is OnlyIncludeTeamsConstraint:
+                if any([t in constraint.teams for t in self.teams]):  # check if any teams to exclude are included
+                    return False
+        return True
