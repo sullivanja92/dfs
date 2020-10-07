@@ -132,6 +132,18 @@ class LineupOptimizer:
             raise ValueError('Teams to exclude must not be none or empty')
         self._add_constraint(constraints.ExcludeTeamsConstraint(teams, self._data, self._team_col))
 
+    def must_include_team(self, team: str):
+        """
+        Specifies that a lineup must include a player from a given team.
+
+        :param team: The team that the lineup must include.
+        :return: None
+        :raises: ValueError if team is none or not found in data frame.
+        """
+        if team is None or team not in self._data[self._team_col].unique():
+            raise ValueError(f"{team} not found in data frame")
+        self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
+
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """
         Internal method used to add a constraint by first checking if it is valid.

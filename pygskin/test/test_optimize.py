@@ -135,3 +135,18 @@ class TestLineupOptimizer(unittest.TestCase):
         optimizer.clear_constraints()
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertTrue(all([t in [x['team'] for x in lineup.players] for t in teams]))
+
+    def test_must_include_team_constraint(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        with self.assertRaises(ValueError):
+            optimizer.must_include_team(None)
+        with self.assertRaises(ValueError):
+            optimizer.must_include_team('missing')
+        lineup = optimizer.optimize_lineup(site='dk')
+        team = 'GB'
+        self.assertTrue(all([p['team'] != team for p in lineup.players]))  # lineup shouldn't include any GB player
+        optimizer.must_include_team(team)
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue(any([p['team'] == team for p in lineup.players]))  # lineup should include GB player
