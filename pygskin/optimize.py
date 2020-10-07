@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import List, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
@@ -15,24 +15,19 @@ class OptimizedLineup:
     A class that represents an optimized fantasy football lineup for a given site.
     """
 
-    def __init__(self,
-                 site: str,
-                 points: float,
-                 salary: int,
-                 players: List[Dict[str, Any]],
-                 index: List[int]):
+    def __init__(self, problem: LpProblem, data: pd.DataFrame, site: str):
         """
-        :param site: The fantasy football site name.
-        :param points: The points scored by the optimized lineup.
-        :param salary: The salary used by the lineup.
-        :param players: The players, represented as dicts, included in the lineup.
-        :param index: The indices of the lineup players in the original data frame.
+        :param problem: The LP Problem.
+        :param data: The player data frame.
+        :param site: The fantasy site that the lineup has been generated for.
         """
         self.site = site
-        self.points = round(points, 2)
-        self.salary = salary
-        self.players = players
-        self.index = index
+        self.index = [pulp_utils.int_index_from_lp_variable_name(p.name)
+                      for p in filter(lambda x: x.varValue == 1, problem.variables())]
+        players = data.loc[self.index]
+        self.points = round(players['points'].sum(), 2)
+        self.salary = players['salary'].sum()
+        self.players = players.to_dict('records')
 
     def __repr__(self):
         return (f"pygskin.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
@@ -220,24 +215,12 @@ class LineupOptimizer:
         for constraint in self._constraints:
             constraint.apply(problem, index_to_variable_dict)
         problem.solve()
-        column_mappings = {self.name_col: 'name',
-                           self._points_col: 'points',
-                           self.position_col: 'position',
-                           self.salary_col: 'salary',
-                           self.team_col: 'team',
-                           self.datetime_col: 'datetime'}
-        lineup = parse_lineup_from_problem(problem,
-                                           data_frame_utils.map_cols_and_filter_by_values(df, column_mappings),
-                                           site.name())
-        return lineup
-
-
-def parse_lineup_from_problem(problem: LpProblem, data: pd.DataFrame, site: str) -> OptimizedLineup:  # TODO: move this?
-    if not pulp_utils.is_optimal_solution_found(problem):
-        raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
-    index = [pulp_utils.int_index_from_lp_variable_name(p.name)
-             for p in filter(lambda x: x.varValue == 1, problem.variables())]
-    players = data.loc[index]
-    points = players['points'].sum()
-    salary = players['salary'].sum()
-    return OptimizedLineup(site, points, salary, players.to_dict('records'), index)
+        if not pulp_utils.is_optimal_solution_found(problem):
+            raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
+        col_mappings = {self.name_col: 'name',
+                        self._points_col: 'points',
+                        self.position_col: 'position',
+                        self.salary_col: 'salary',
+                        self.team_col: 'team',
+                        self.datetime_col: 'datetime'}
+        return OptimizedLineup(problem, data_frame_utils.map_cols_and_filter_by_values(df, col_mappings), site.name())
