@@ -231,3 +231,21 @@ class MustIncludeTeamConstraint(LineupConstraint):
                 if self.team in constraint.teams:
                     return False
         return True
+
+
+class IncludePlayerConstraint(LineupConstraint):
+
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
+        pass
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        pass
+
+
+class ExcludePlayerConstraint(LineupConstraint):
+
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
+        pass
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        pass

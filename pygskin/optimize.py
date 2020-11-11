@@ -1,3 +1,4 @@
+import os.path
 from typing import List, Union
 
 import pandas as pd
@@ -28,6 +29,11 @@ class OptimizedLineup:
         self.points = round(players['points'].sum(), 2)
         self.salary = players['salary'].sum()
         self.players = players.to_dict('records')
+
+    def write_to_file(self, file_path: str) -> None:
+        mode = '' if os.path.isfile(file_path) else ''
+        with open(file_path, mode=mode) as f:
+            pass
 
     def __repr__(self):
         return (f"pygskin.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
@@ -65,14 +71,14 @@ class LineupOptimizer:
         :param datetime_col: The game datetime column. Default is 'datetime'.
         """
         self._data = data
-        if not all(c in data.columns for c in [name_col, points_col, position_col, salary_col, team_col, datetime_col]):
+        if not all(c in data.columns for c in [name_col, points_col, position_col, salary_col, team_col]):
             raise ValueError('DataFrame does not contain necessary columns')
         self._name_col = name_col
         self._points_col = points_col
         self._position_col = position_col
         self._salary_col = salary_col
         self._team_col = team_col
-        self._datetime_col = datetime_col
+        self._datetime_col = datetime_col  # TODO: make optional
         self._constraints = []
 
     @property
@@ -139,6 +145,14 @@ class LineupOptimizer:
             raise ValueError(f"{team} not found in data frame")
         self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
 
+    def include_player(self, player: str) -> None:
+        if player is None or player not in self._data[self._team_col].unique():
+            raise ValueError(f"{player} not found in data frame")
+
+    def exclude_player(self, player: str) -> None:
+        if player is None:
+            raise ValueError(f"{player} not found in data frame")
+
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """
         Internal method used to add a constraint by first checking if it is valid.
@@ -203,6 +217,8 @@ class LineupOptimizer:
         problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
         rewards = []
         for k, v in position_to_index_dict.items():
+            print(points[k])
+            print(position_to_index_dict[k])
             rewards += lpSum([points[k][i] * position_to_index_dict[k][i] for i in v])  # sum player points
             constraints_for_position = position_constraints[k]
             problem += lpSum([position_to_index_dict[k][i] for i in v]) >= constraints_for_position[0]
@@ -217,10 +233,15 @@ class LineupOptimizer:
         problem.solve()
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
+        # col_mappings = {self.name_col: 'name',
+        #                 self._points_col: 'points',
+        #                 self.position_col: 'position',
+        #                 self.salary_col: 'salary',
+        #                 self.team_col: 'team',
+        #                 self.datetime_col: 'datetime'}
         col_mappings = {self.name_col: 'name',
                         self._points_col: 'points',
                         self.position_col: 'position',
                         self.salary_col: 'salary',
-                        self.team_col: 'team',
-                        self.datetime_col: 'datetime'}
+                        self.team_col: 'team'}
         return OptimizedLineup(problem, data_frame_utils.map_cols_and_filter_by_values(df, col_mappings), site.name())

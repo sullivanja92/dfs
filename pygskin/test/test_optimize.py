@@ -150,3 +150,9 @@ class TestLineupOptimizer(unittest.TestCase):
         optimizer.must_include_team(team)
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertTrue(any([p['team'] == team for p in lineup.players]))  # lineup should include GB player
+
+    def test_include_player_constraint(self):
+        pass
+
+    def test_exclude_player_constraint(self):
+        pass
