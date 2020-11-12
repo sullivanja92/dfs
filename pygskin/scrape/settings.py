@@ -8,3 +8,4 @@ FEED_EXPORTERS = {
     'json': 'scrapy.exporters.JsonItemExporter'
 }
 FEED_EXPORT_ENCODING = 'utf-8'
+LOG_ENABLED = False

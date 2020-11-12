@@ -41,10 +41,18 @@ def parse_scraped_week_to_data_frame(games_file: str, salary_file: str) -> pd.Da
     :param games_file: the path to the scraped games json file
     :param salary_file: the path to the scraped salary json file
     :return: a pandas DataFrame
-    :raises: ValueError if the file does not exist
+    :raises: ValueError if the files do not exist
     """
     if not file_utils.file_exists(salary_file):
-        raise ValueError(f"The file at {salary_file} does not exist")
+        raise ValueError(f"The salaries file at {salary_file} does not exist")
+    if not file_utils.file_exists(games_file):
+        raise ValueError(f"The games file at {games_file} does not exist")
+    team_to_datetime = {}
+    with open(games_file, mode='r') as f:
+        games_json = json.load(f)
+        for game in games_json:
+            team_to_datetime[game['home_team']] = game['datetime']
+            team_to_datetime[game['away_team']] = game['datetime']
     players_dict = {}
     with open(salary_file, mode='r') as f:
         salary_json = json.load(f)
@@ -54,6 +62,7 @@ def parse_scraped_week_to_data_frame(games_file: str, salary_file: str) -> pd.Da
                 salary['year'] = salary.pop('Year')  # TODO: remove this once key pipeline is fixed
                 salary[f"{name.lower()}_points"] = salary.pop('points')
                 salary[f"{name.lower()}_salary"] = salary.pop('salary')
+                salary['datetime'] = team_to_datetime[salary['team']]
                 key = f"{salary['name']}|{salary['team']}|{salary['position']}"
                 if key in players_dict:
                     players_dict[key].update(salary)
@@ -66,6 +75,8 @@ def parse_scraped_week_to_data_frame(games_file: str, salary_file: str) -> pd.Da
     data['dk_points'] = pd.to_numeric(data['dk_points'])
     data['fd_salary'] = pd.to_numeric(data['fd_salary'])
     data['dk_salary'] = pd.to_numeric(data['dk_salary'])
+    data['datetime'] = pd.to_datetime(data['datetime'])
+    print(data['datetime'].dtype)
     return data
 
 
@@ -76,11 +87,8 @@ def scrape_and_parse_week_to_data_frame(year, week, directory):
 
     :param year: the year of the week to scrape
     :param week: the week number to scrape
-    :param directory: the directory to save the scraped json file to
+    :param directory: the directory to save the scraped json files to
     :return: a pandas DataFrame
     """
     game_file, salary_file = scrape_week(year, week, directory)
     return parse_scraped_week_to_data_frame(game_file, salary_file)
-
-
-print(scrape_and_parse_week_to_data_frame(2020, 1, '/users/joshsullivan').head(n=5))
