@@ -217,8 +217,6 @@ class LineupOptimizer:
         problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
         rewards = []
         for k, v in position_to_index_dict.items():
-            print(points[k])
-            print(position_to_index_dict[k])
             rewards += lpSum([points[k][i] * position_to_index_dict[k][i] for i in v])  # sum player points
             constraints_for_position = position_constraints[k]
             problem += lpSum([position_to_index_dict[k][i] for i in v]) >= constraints_for_position[0]

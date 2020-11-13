@@ -13,6 +13,12 @@ class SalarySpider(scrapy.Spider):
     allowed_domains = ['rotoguru1.com']
     download_delay = 1
     custom_settings = {
+        'FEED_FORMAT': 'json',
+        'FEED_EXPORTERS': {
+            'json': 'scrapy.exporters.JsonItemExporter'
+        },
+        'FEED_EXPORT_ENCODING': 'utf-8',
+        'LOG_ENABLED': False,
         'FEED_URI': '%(directory)s/SALARIES_%(year)s_%(week)s.json',
         'ITEM_PIPELINES': {
             'pygskin.scrape.pipelines.RotoGuruSalaryKeysPipeline': 100,
