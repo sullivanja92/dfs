@@ -1,4 +1,5 @@
 from datetime import datetime
+from string import Template
 from typing import Dict, List
 
 import scrapy
@@ -7,7 +8,7 @@ from scrapy.selector.unified import Selector
 
 from pygskin.scrape.items import GameItem
 
-GAME_URL_XPATH = '//a[text()="Final"]/@href'
+GAME_URL_XPATH_TEMPLATE = Template('//h2[contains(text(),"$year Week $week")]/parent::*/following-sibling::div[@class="game_summaries"]//a[contains(@href,"boxscores")]/@href')
 HOME_TEAM_XPATH = '(//a[@itemprop="name"]/@href)[1]'
 AWAY_TEAM_XPATH = '(//a[@itemprop="name"]/@href)[2]'
 HOME_SCORE_XPATH = '(//div[@class="score"]/text())[1]'
@@ -75,7 +76,7 @@ class GameSpider(scrapy.Spider):
         :param kwargs: keyword arguments
         :return: additional requests for each game in the week
         """
-        for game_url in response.xpath(GAME_URL_XPATH).getall():
+        for game_url in response.xpath(GAME_URL_XPATH_TEMPLATE.substitute({'year': self.year, 'week': self.week})).getall():
             yield scrapy.Request(response.urljoin(game_url), callback=parse_game)
 
 
@@ -97,27 +98,27 @@ def parse_game(response: HtmlResponse) -> GameItem:
     item['datetime'] = datetime.strptime(f"{date} {time}".replace('am', 'AM').replace('pm', 'PM'), DATETIME_FORMAT)
     item['home_offense_stats'] = _process_player_stats_rows(response.xpath(HOME_PASSING_RUSHING_RECEIVING_ROWS_XPATH))
     item['away_offense_stats'] = _process_player_stats_rows(response.xpath(AWAY_PASSING_RUSHING_RECEIVING_ROWS_XPATH))
+    item['home_defense_stats'] = []
+    item['away_defense_stats'] = []
+    item['home_returns_stats'] = []
+    item['away_returns_stats'] = []
+    item['home_snap_counts'] = []
+    item['away_snap_counts'] = []
     for comment in response.xpath('//comment()'):  # process comments which include some tables
         comment_html = comment.get().replace('<!--', '').replace('-->', '')
         selector = scrapy.Selector(text=comment_html)
-        home_defense_rows = selector.xpath(HOME_DEFENSE_ROWS_XPATH)
-        if len(home_defense_rows) > 0:
-            item['home_defense_stats'] = _process_player_stats_rows(home_defense_rows)
-        away_defense_rows = selector.xpath(AWAY_DEFENSE_ROWS_XPATH)
-        if len(away_defense_rows) > 0:
-            item['away_defense_stats'] = _process_player_stats_rows(away_defense_rows)
-        home_returns_rows = selector.xpath(HOME_RETURNS_ROWS_XPATH)
-        if len(home_returns_rows) > 0:
-            item['home_returns_stats'] = _process_player_stats_rows(home_returns_rows)
-        away_returns_rows = selector.xpath(AWAY_RETURNS_ROWS_XPATH)
-        if len(away_returns_rows) > 0:
-            item['away_returns_stats'] = _process_player_stats_rows(away_returns_rows)
-        home_snap_rows = selector.xpath(HOME_SNAP_COUNTS_ROWS_XPATH)
-        if len(home_snap_rows) > 0:
-            item['home_snap_counts'] = _process_player_stats_rows(home_snap_rows)
-        away_snap_rows = selector.xpath(AWAY_SNAP_COUNTS_ROWS_XPATH)
-        if len(home_snap_rows) > 0:
-            item['away_snap_counts'] = _process_player_stats_rows(away_snap_rows)
+        if len(selector.xpath(HOME_DEFENSE_ROWS_XPATH)) > 0:
+            item['home_defense_stats'] = _process_player_stats_rows(selector.xpath(HOME_DEFENSE_ROWS_XPATH))
+        if len(selector.xpath(AWAY_DEFENSE_ROWS_XPATH)) > 0:
+            item['away_defense_stats'] = _process_player_stats_rows(selector.xpath(AWAY_DEFENSE_ROWS_XPATH))
+        if len(selector.xpath(HOME_RETURNS_ROWS_XPATH)) > 0:
+            item['home_returns_stats'] = _process_player_stats_rows(selector.xpath(HOME_RETURNS_ROWS_XPATH))
+        if len(selector.xpath(AWAY_RETURNS_ROWS_XPATH)) > 0:
+            item['away_returns_stats'] = _process_player_stats_rows(selector.xpath(AWAY_RETURNS_ROWS_XPATH))
+        if len(selector.xpath(HOME_SNAP_COUNTS_ROWS_XPATH)) > 0:
+            item['home_snap_counts'] = _process_player_stats_rows(selector.xpath(HOME_SNAP_COUNTS_ROWS_XPATH))
+        if len(selector.xpath(AWAY_SNAP_COUNTS_ROWS_XPATH)) > 0:
+            item['away_snap_counts'] = _process_player_stats_rows(selector.xpath(AWAY_SNAP_COUNTS_ROWS_XPATH))
         home_drives_table = selector.xpath(HOME_DRIVES_TABLE_XPATH)
         if len(home_drives_table) > 0:
             item['home_drives'] = _process_table(home_drives_table)
@@ -134,6 +135,8 @@ def _process_player_stats_rows(rows: List) -> List[Dict[str, str]]:
     :param rows: the stats rows
     :return: a list of row dicts
     """
+    if len(rows) == 0:
+        return []
     stats = []
     for row in rows:
         stat_dict = dict()

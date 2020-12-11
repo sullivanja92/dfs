@@ -1,10 +1,12 @@
-import os.path
-from typing import List, Union
+import csv
+from collections.abc import Mapping
+from typing import AbstractSet, List, Union, Iterator
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum
 
 from pygskin import constraints
+from pygskin import file_utils
 from pygskin import positions, data_frame_utils, pulp_utils
 from pygskin import sites
 from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
@@ -28,12 +30,27 @@ class OptimizedLineup:
         players = data.loc[self.index]
         self.points = round(players['points'].sum(), 2)
         self.salary = players['salary'].sum()
-        self.players = players.to_dict('records')
+        self.players = [LineupPlayer(p) for p in players.to_dict('records')]
 
     def write_to_file(self, file_path: str) -> None:
-        mode = '' if os.path.isfile(file_path) else ''
-        with open(file_path, mode=mode) as f:
-            pass
+        """
+        Writes the optimized lineup to a CSV file.
+
+        :param file_path: the path to the file which will be created if it does not exist.
+        :return: None
+        :raises: ValueError if file_path is None or points to a non-CSV file.
+        """
+        if file_path is None:
+            raise ValueError('File path cannot be none')
+        extension = file_utils.get_extension(file_path)
+        if extension != '.csv':
+            raise ValueError(f"Only CSV output is supported, found: {extension}")
+        file_exists = file_utils.file_exists(file_path)
+        with open(file_path, mode='a') as f:
+            writer = csv.DictWriter(f, fieldnames=self.players[0].keys())
+            if not file_exists:
+                writer.writeheader()
+            writer.writerows(self.players)
 
     def __repr__(self):
         return (f"pygskin.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
@@ -44,6 +61,38 @@ class OptimizedLineup:
                                     for p in self.players])
         return (f"Optimized {self.site} Lineup \n"
                 f"{self.points} points @ {self.salary} salary \n") + players_string
+
+
+class LineupPlayer(Mapping):
+    """
+    A model of a player included in an optimized lineup.
+    """
+
+    def __len__(self) -> int:
+        return len(vars(self))
+
+    def __iter__(self) -> Iterator[str]:
+        return iter({a: getattr(self, a) for a in vars(self)})
+
+    def keys(self) -> AbstractSet[str]:
+        return vars(self).keys()
+
+    def __init__(self, player_dict):
+        """
+        :param player_dict: the player dict from dataframe
+        """
+        self.name = player_dict['name']
+        self.year = player_dict['year']
+        self.week = player_dict['week']
+        self.position = player_dict['position']
+        self.team = player_dict['team']
+        self.opponent = player_dict['opponent']
+        self.datetime = player_dict['datetime']
+        self.points = player_dict['points']
+        self.salary = player_dict['salary']
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 
 class LineupOptimizer:
@@ -60,7 +109,10 @@ class LineupOptimizer:
                  position_col: str = 'position',
                  salary_col: str = 'salary',
                  team_col: str = 'team',
-                 datetime_col: str = 'datetime'):
+                 datetime_col: str = 'datetime',
+                 year_col: str = 'year',
+                 week_col: str = 'week',
+                 opponent_col: str = 'opponent'):
         """
         :param data: The pandas data frame containing fantasy data.
         :param name_col: The player name column. Default is 'name'.
@@ -69,6 +121,9 @@ class LineupOptimizer:
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
         :param datetime_col: The game datetime column. Default is 'datetime'.
+        :param year_col: The dataframe year column. Default is 'year'.
+        :param week_col: The dataframe week column. Default is 'week'.
+        :param opponent_col: The dataframe opponent column. Default is 'opponent'.
         """
         self._data = data
         if not all(c in data.columns for c in [name_col, points_col, position_col, salary_col, team_col]):
@@ -78,7 +133,10 @@ class LineupOptimizer:
         self._position_col = position_col
         self._salary_col = salary_col
         self._team_col = team_col
-        self._datetime_col = datetime_col  # TODO: make optional
+        self._datetime_col = datetime_col
+        self._year_col = year_col
+        self._week_col = week_col
+        self._opponent_col = opponent_col
         self._constraints = []
 
     @property
@@ -108,6 +166,18 @@ class LineupOptimizer:
     @property
     def datetime_col(self):
         return self._datetime_col
+
+    @property
+    def year_col(self):
+        return self._year_col
+
+    @property
+    def week_col(self):
+        return self._week_col
+
+    @property
+    def opponent_col(self):
+        return self._opponent_col
 
     def only_include_teams(self, teams: List[str]) -> None:
         """
@@ -146,12 +216,28 @@ class LineupOptimizer:
         self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
 
     def include_player(self, player: str) -> None:
-        if player is None or player not in self._data[self._team_col].unique():
+        """
+        Specifies that a lineup must include a player identified by name.
+
+        :param player: the player name
+        :return: None
+        :raises: ValueError if the player is None or not found in the dataframe
+        """
+        if player is None or player not in self._data[self._name_col].unique():
             raise ValueError(f"{player} not found in data frame")
+        self._add_constraint(constraints.IncludePlayerConstraint(player, self._data, self._name_col))
 
     def exclude_player(self, player: str) -> None:
+        """
+        Specifies that a lineup must exclude a player identified by name.
+
+        :param player: the player name
+        :return: None
+        :raises: ValueError if player is None
+        """
         if player is None:
             raise ValueError(f"{player} not found in data frame")
+        self._add_constraint(constraints.ExcludePlayerConstraint(player, self._data, self._name_col))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """
@@ -231,15 +317,13 @@ class LineupOptimizer:
         problem.solve()
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
-        # col_mappings = {self.name_col: 'name',
-        #                 self._points_col: 'points',
-        #                 self.position_col: 'position',
-        #                 self.salary_col: 'salary',
-        #                 self.team_col: 'team',
-        #                 self.datetime_col: 'datetime'}
         col_mappings = {self.name_col: 'name',
                         self._points_col: 'points',
                         self.position_col: 'position',
                         self.salary_col: 'salary',
-                        self.team_col: 'team'}
+                        self.team_col: 'team',
+                        self.datetime_col: 'datetime',
+                        self._year_col: 'year',
+                        self._week_col: 'week',
+                        self._opponent_col: 'opponent'}
         return OptimizedLineup(problem, data_frame_utils.map_cols_and_filter_by_values(df, col_mappings), site.name())

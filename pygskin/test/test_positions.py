@@ -1,4 +1,5 @@
 import unittest
+
 from pygskin.positions import Position, normalize_position
 
 

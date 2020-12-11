@@ -2,10 +2,9 @@ import json
 from typing import Tuple
 
 import pandas as pd
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
 
 from pygskin import file_utils
+from pygskin.scrape import scrapy_utils
 from pygskin.scrape.spiders.game_spider import GameSpider
 from pygskin.scrape.spiders.salary_spider import SalarySpider
 
@@ -27,10 +26,8 @@ def scrape_week(year: int, week: int, directory: str) -> Tuple[str, str]:
     salaries_file_path = f"{directory}/SALARIES_{year}_{week}.json"
     file_utils.try_remove_file(games_file_path)
     file_utils.try_remove_file(salaries_file_path)
-    process = CrawlerProcess(get_project_settings())
-    process.crawl(SalarySpider, year=year, week=week, directory=directory)
-    process.crawl(GameSpider, year=year, week=week, directory=directory)
-    process.start()
+    scrapy_utils.run_spider(SalarySpider, year=year, week=week, directory=directory)
+    scrapy_utils.run_spider(GameSpider, year=year, week=week, directory=directory)
     return games_file_path, salaries_file_path
 
 
@@ -76,7 +73,6 @@ def parse_scraped_week_to_data_frame(games_file: str, salary_file: str) -> pd.Da
     data['fd_salary'] = pd.to_numeric(data['fd_salary'])
     data['dk_salary'] = pd.to_numeric(data['dk_salary'])
     data['datetime'] = pd.to_datetime(data['datetime'])
-    print(data['datetime'].dtype)
     return data
 
 

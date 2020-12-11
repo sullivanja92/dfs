@@ -9,7 +9,7 @@ from pygskin.sites import Site
 class TestLineupOptimizer(unittest.TestCase):
 
     def setUp(self):
-        self.data = data.load_2019_data()
+        self.data = data.load_2020_data()
 
     def test_optimizer_setting_missing_column(self):
         with self.assertRaises(ValueError):
@@ -24,40 +24,40 @@ class TestLineupOptimizer(unittest.TestCase):
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         lineup = optimizer.optimize_lineup('DraftKings')
-        self.assertEqual(343.4, lineup.points)
-        self.assertEqual(48800, lineup.salary)
+        self.assertEqual(288.78, lineup.points)
+        self.assertEqual(49100, lineup.salary)
 
     def test_draftkings_optimizer_str_site_abbreviation(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         lineup = optimizer.optimize_lineup('DK')
-        self.assertEqual(343.4, lineup.points)
-        self.assertEqual(48800, lineup.salary)
+        self.assertEqual(288.78, lineup.points)
+        self.assertEqual(49100, lineup.salary)
 
     def test_fanduel_optimizer_str_site_full(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
                                     points_col='fd_points',
                                     salary_col='fd_salary')
         lineup = optimizer.optimize_lineup('FanDuel')
-        self.assertEqual(277.26, lineup.points)
-        self.assertEqual(56400, lineup.salary)
+        self.assertEqual(244.68, lineup.points)
+        self.assertEqual(59800, lineup.salary)
 
     def test_fanduel_optimizer_str_site_abbreviation(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
                                     points_col='fd_points',
                                     salary_col='fd_salary')
         lineup = optimizer.optimize_lineup('FD')
-        self.assertEqual(277.26, lineup.points)
-        self.assertEqual(56400, lineup.salary)
+        self.assertEqual(244.68, lineup.points)
+        self.assertEqual(59800, lineup.salary)
 
     def test_draft_kings_optimizer(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         lineup = optimizer.optimize_lineup(site=Site.DRAFTKINGS)
-        self.assertEqual(343.4, lineup.points)
-        self.assertEqual(48800, lineup.salary)
+        self.assertEqual(288.78, lineup.points)
+        self.assertEqual(49100, lineup.salary)
 
     def test_draft_kings_optimizer_missing_column(self):
         self.assertRaises(ValueError, lambda: LineupOptimizer(self.data[self.data['week'] == 1]))
@@ -81,8 +81,8 @@ class TestLineupOptimizer(unittest.TestCase):
         df['position'] = df['position'].apply(lambda x: change_position(x))
         optimizer = LineupOptimizer(df, points_col='dk_points', salary_col='dk_salary')
         lineup = optimizer.optimize_lineup(site=Site.DRAFTKINGS)
-        self.assertEqual(290.52, lineup.points)
-        self.assertEqual(49900, lineup.salary)
+        self.assertEqual(293.5, lineup.points)
+        self.assertEqual(50000, lineup.salary)
 
     def test_draft_kings_optimizer_missing_positions(self):
         optimizer = LineupOptimizer(self.data[self.data['position'] != 'QB'],
@@ -119,8 +119,8 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.exclude_teams(None)
         with self.assertRaises(ValueError):
             optimizer.exclude_teams([])
-        teams = ['DAL', 'CAR']
-        optimizer.exclude_teams(teams)  # should exclude Dak Prescott & Christian McCaffrey
+        teams = ['GB', 'SEA']
+        optimizer.exclude_teams(teams)  # should exclude Davante Adams and Russell Wilson
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertTrue(all([x['team'] not in teams for x in lineup.players]))
 
@@ -128,8 +128,8 @@ class TestLineupOptimizer(unittest.TestCase):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
                                     points_col='dk_points',
                                     salary_col='dk_salary')
-        teams = ['DAL', 'CAR']
-        optimizer.exclude_teams(teams)  # should exclude Dak Prescott & Christian McCaffrey
+        teams = ['GB', 'SEA']
+        optimizer.exclude_teams(teams)  # should exclude Davante Adams and Russell Wilson
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertTrue(all([x['team'] not in teams for x in lineup.players]))
         optimizer.clear_constraints()
@@ -145,14 +145,45 @@ class TestLineupOptimizer(unittest.TestCase):
         with self.assertRaises(ValueError):
             optimizer.must_include_team('missing')
         lineup = optimizer.optimize_lineup(site='dk')
-        team = 'GB'
-        self.assertTrue(all([p['team'] != team for p in lineup.players]))  # lineup shouldn't include any GB player
+        team = 'DET'
+        self.assertTrue(all([p['team'] != team for p in lineup.players]))  # lineup shouldn't include any DET player
         optimizer.must_include_team(team)
         lineup = optimizer.optimize_lineup(site='dk')
-        self.assertTrue(any([p['team'] == team for p in lineup.players]))  # lineup should include GB player
+        self.assertTrue(any([p['team'] == team for p in lineup.players]))  # lineup should include DET player
 
     def test_include_player_constraint(self):
-        pass
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 316.98)
+        self.assertEqual(lineup.salary, 49700)
+        with self.assertRaises(ValueError):
+            optimizer.include_player(None)
+        with self.assertRaises(ValueError):
+            optimizer.include_player('Missing Player')
+        optimizer.include_player('Aaron Rodgers')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue('Aaron Rodgers' in [p.name for p in lineup.players])
+        self.assertEqual(lineup.points, 307.28)
+        self.assertEqual(lineup.salary, 49600)
 
     def test_exclude_player_constraint(self):
-        pass
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 316.98)
+        self.assertEqual(lineup.salary, 49700)
+        optimizer.exclude_player('Missing Player')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 316.98)
+        self.assertEqual(lineup.salary, 49700)
+        self.assertTrue('Joe Mixon' in [p.name for p in lineup.players])
+        optimizer.exclude_player('Joe Mixon')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 295.08)
+        self.assertEqual(lineup.salary, 50000)
+        self.assertFalse('Joe Mixon' in [p.name for p in lineup.players])
+        with self.assertRaises(ValueError):
+            optimizer.include_player(None)

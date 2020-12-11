@@ -10,6 +10,9 @@ class Position(Enum):
     TE = 'TE'
     DST = 'DST'
 
+    def __str__(self):
+        return self.value
+
 
 def normalize_position(position: str) -> Optional[Position]:
     if position is None:

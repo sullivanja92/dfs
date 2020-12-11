@@ -235,17 +235,45 @@ class MustIncludeTeamConstraint(LineupConstraint):
 
 class IncludePlayerConstraint(LineupConstraint):
 
+    def __init__(self, player: str, data: pd.DataFrame, name_col: str):
+        self.player = player
+        self.data = data
+        self.name_col = name_col
+
     def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
-        pass
+        index_to_name_dict = data_frame_utils.map_index_to_col(self.data, self.name_col)
+        lp_vars_for_name = []  # if multiple players with same name
+        for k, v in index_to_lp_variable_dict.items():
+            if index_to_name_dict[k] == self.player:
+                lp_vars_for_name.append(v)
+        problem += lpSum(lp_vars_for_name) >= 1
 
     def is_valid(self, constraints: List['LineupConstraint']) -> bool:
-        pass
+        for constraint in constraints:
+            if type(constraint) is ExcludePlayerConstraint:
+                if self.player == constraint.player:
+                    return False
+        return True
 
 
 class ExcludePlayerConstraint(LineupConstraint):
 
+    def __init__(self, player: str, data: pd.DataFrame, name_col: str):
+        self.player = player
+        self.data = data
+        self.name_col = name_col
+
     def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
-        pass
+        index_to_name_dict = data_frame_utils.map_index_to_col(self.data, self.name_col)
+        lp_vars_for_name = []  # if multiple players with same name
+        for k, v in index_to_lp_variable_dict.items():
+            if index_to_name_dict[k] == self.player:
+                lp_vars_for_name.append(v)
+        problem += lpSum(lp_vars_for_name) == 0
 
     def is_valid(self, constraints: List['LineupConstraint']) -> bool:
-        pass
+        for constraint in constraints:
+            if type(constraint) is IncludePlayerConstraint:
+                if self.player == constraint.player:
+                    return False
+        return True
