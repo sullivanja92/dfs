@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from typing import AbstractSet, List, Union, Iterator
 
 import pandas as pd
-from pulp import LpMaximize, LpProblem, LpVariable, lpSum
+from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 
 from pygskin import constraints
 from pygskin import file_utils
@@ -314,7 +314,7 @@ class LineupOptimizer:
         problem += lpSum(rewards)
         for constraint in self._constraints:
             constraint.apply(problem, index_to_variable_dict)
-        problem.solve()
+        problem.solve(PULP_CBC_CMD(msg=False))
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
         col_mappings = {self.name_col: 'name',
