@@ -15,6 +15,7 @@ setuptools.setup(
     packages=['pygskin'],
     install_requires=[
         'pandas',
+        'pulp',
         'scrapy'
     ],
     classifiers=[
