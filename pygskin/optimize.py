@@ -104,6 +104,7 @@ class LineupOptimizer:
 
     def __init__(self,
                  data: pd.DataFrame,
+                 id_col: str = 'id',
                  name_col: str = 'name',
                  points_col: str = 'points',
                  position_col: str = 'position',
@@ -115,6 +116,7 @@ class LineupOptimizer:
                  opponent_col: str = 'opponent'):
         """
         :param data: The pandas data frame containing fantasy data.
+        :param id_col: The player ID column. Default is 'id'.
         :param name_col: The player name column. Default is 'name'.
         :param points_col: The fantasy points column. Default is 'points'.
         :param position_col: The player position column. Default is 'position'.
@@ -128,6 +130,7 @@ class LineupOptimizer:
         self._data = data
         if not all(c in data.columns for c in [name_col, points_col, position_col, salary_col, team_col]):
             raise ValueError('DataFrame does not contain necessary columns')
+        self._id_col = id_col
         self._name_col = name_col
         self._points_col = points_col
         self._position_col = position_col
@@ -142,6 +145,10 @@ class LineupOptimizer:
     @property
     def data(self):
         return self._data
+
+    @property
+    def id_col(self):
+        return self._id_col
 
     @property
     def name_col(self):
@@ -215,17 +222,25 @@ class LineupOptimizer:
             raise ValueError(f"{team} not found in data frame")
         self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
 
-    def include_player(self, player: str) -> None:
+    def include_player(self, **kwargs) -> None:
         """
-        Specifies that a lineup must include a player identified by name.
+        Specifies that a lineup must include a player identified by either name or id.
+        Either name or id must be provided in kwargs.
 
-        :param player: the player name
         :return: None
-        :raises: ValueError if the player is None or not found in the dataframe
+        :raises: InvalidConstraintException if the player is None or not found in the dataframe
         """
-        if player is None or player not in self._data[self._name_col].unique():
-            raise ValueError(f"{player} not found in data frame")
-        self._add_constraint(constraints.IncludePlayerConstraint(player, self._data, self._name_col))
+        if all([it not in kwargs for it in ['id', 'name']]):
+            raise InvalidConstraintException('Must provide id or name')
+        if 'id' in kwargs:
+            key = kwargs['id']
+            col = self._id_col
+        else:
+            key = kwargs['name']
+            col = self.name_col
+        if key is None or key not in self._data[col].unique():
+            raise InvalidConstraintException(f"{key} not found in data frame's {col} column")
+        self._add_constraint(constraints.IncludePlayerConstraint(key, self._data, col))
 
     def exclude_player(self, player: str) -> None:
         """

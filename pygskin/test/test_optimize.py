@@ -1,7 +1,7 @@
 import unittest
 
 from pygskin import data
-from pygskin.exceptions import InvalidDataFrameException
+from pygskin.exceptions import InvalidDataFrameException, InvalidConstraintException
 from pygskin.optimize import LineupOptimizer
 from pygskin.sites import Site
 
@@ -158,11 +158,23 @@ class TestLineupOptimizer(unittest.TestCase):
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 316.98)
         self.assertEqual(lineup.salary, 49700)
-        with self.assertRaises(ValueError):
-            optimizer.include_player(None)
-        with self.assertRaises(ValueError):
-            optimizer.include_player('Missing Player')
-        optimizer.include_player('Aaron Rodgers')
+        # test include by name
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.include_player(name=None)
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.include_player(name='Missing Player')
+        optimizer.include_player(name='Aaron Rodgers')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertTrue('Aaron Rodgers' in [p.name for p in lineup.players])
+        self.assertEqual(lineup.points, 307.28)
+        self.assertEqual(lineup.salary, 49600)
+        # test include by id
+        optimizer.clear_constraints()
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.include_player(id=None)
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.include_player(id='Missing ID')
+        optimizer.include_player(id=1416)
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertTrue('Aaron Rodgers' in [p.name for p in lineup.players])
         self.assertEqual(lineup.points, 307.28)
@@ -186,4 +198,4 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.salary, 50000)
         self.assertFalse('Joe Mixon' in [p.name for p in lineup.players])
         with self.assertRaises(ValueError):
-            optimizer.include_player(None)
+            optimizer.exclude_player(None)
