@@ -232,27 +232,24 @@ class LineupOptimizer:
         """
         if all([it not in kwargs for it in ['id', 'name']]):
             raise InvalidConstraintException('Must provide id or name')
-        if 'id' in kwargs:
-            key = kwargs['id']
-            col = self._id_col
-        else:
-            key = kwargs['name']
-            col = self.name_col
+        key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise InvalidConstraintException(f"{key} not found in data frame's {col} column")
         self._add_constraint(constraints.IncludePlayerConstraint(key, self._data, col))
 
-    def exclude_player(self, player: str) -> None:
+    def exclude_player(self, **kwargs) -> None:
         """
         Specifies that a lineup must exclude a player identified by name.
 
-        :param player: the player name
         :return: None
-        :raises: ValueError if player is None
+        :raises: InvalidConstraintException if player is None or not found in dataframe
         """
-        if player is None:
-            raise ValueError(f"{player} not found in data frame")
-        self._add_constraint(constraints.ExcludePlayerConstraint(player, self._data, self._name_col))
+        if all([it not in kwargs for it in ['id', 'name']]):
+            raise InvalidConstraintException('Must provide id or name')
+        key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
+        if key is None or key not in self._data[col].unique():
+            raise InvalidConstraintException(f"{key} not found in data frame's {col} column")
+        self._add_constraint(constraints.ExcludePlayerConstraint(key, self._data, col))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """

@@ -187,15 +187,25 @@ class TestLineupOptimizer(unittest.TestCase):
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 316.98)
         self.assertEqual(lineup.salary, 49700)
-        optimizer.exclude_player('Missing Player')
-        lineup = optimizer.optimize_lineup(site='dk')
-        self.assertEqual(lineup.points, 316.98)
-        self.assertEqual(lineup.salary, 49700)
+        # test include by name
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.exclude_player(name='Missing Player')
         self.assertTrue('Joe Mixon' in [p.name for p in lineup.players])
-        optimizer.exclude_player('Joe Mixon')
+        optimizer.exclude_player(name='Joe Mixon')
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 295.08)
         self.assertEqual(lineup.salary, 50000)
         self.assertFalse('Joe Mixon' in [p.name for p in lineup.players])
-        with self.assertRaises(ValueError):
-            optimizer.exclude_player(None)
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.exclude_player(name=None)
+        # test include by id
+        optimizer.clear_constraints()
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.exclude_player(id=None)
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.exclude_player(id='Missing ID')
+        optimizer.exclude_player(id=1453)
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertFalse('Joe Mixon' in [p.name for p in lineup.players])
+        self.assertEqual(lineup.points, 295.08)
+        self.assertEqual(lineup.salary, 50000)
