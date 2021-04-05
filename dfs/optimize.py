@@ -1,6 +1,7 @@
 import csv
 import logging
 from collections.abc import Mapping
+from numbers import Number
 from typing import AbstractSet, List, Union, Iterator
 
 import pandas as pd
@@ -13,7 +14,7 @@ from dfs import sites
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from dfs.schedule import ScheduleType
 
-# TODO: maybe throw value errors from set_constraint methods and invalid constraint exceptions from _add_constraint
+# TODO: ensure throwing value errors from set_constraint methods and InvalidConstraintExceptions from _add_constraint
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -280,6 +281,12 @@ class LineupOptimizer:
         self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum, team, self._data, self._team_col))
 
     def set_min_from_team(self, minimum: int, team: str) -> None:
+        raise NotImplementedError()
+
+    def set_max_salary(self, maximum: Number) -> None:
+        raise NotImplementedError()
+
+    def set_minimum_salary(self, minimum: Number) -> None:
         raise NotImplementedError()
 
     def set_include_qb_receiver_stack(self) -> None:
