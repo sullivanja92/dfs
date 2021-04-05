@@ -13,6 +13,7 @@ from dfs import sites
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from dfs.schedule import ScheduleType
 
+# TODO: maybe throw value errors from set_constraint methods and invalid constraint exceptions from _add_constraint
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -192,7 +193,7 @@ class LineupOptimizer:
     def opponent_col(self):
         return self._opponent_col
 
-    def only_include_teams(self, teams: List[str]) -> None:
+    def set_only_include_teams(self, teams: List[str]) -> None:
         """
         Sets the teams that are to be considered for the lineup optimization.
 
@@ -205,7 +206,7 @@ class LineupOptimizer:
         log.warning(f"Only include teams: {teams}")
         self._add_constraint(constraints.OnlyIncludeTeamsConstraint(teams, self._data, self._team_col))
 
-    def exclude_teams(self, teams: List[str]) -> None:
+    def set_exclude_teams(self, teams: List[str]) -> None:
         """
         Sets the list of teams whose players are to be excluded from lineup optimization.
 
@@ -216,9 +217,10 @@ class LineupOptimizer:
         if teams is None or len(teams) == 0:
             raise ValueError('Teams to exclude must not be none or empty')
         log.warning(f"Excluding teams: {teams}")
-        self._add_constraint(constraints.ExcludeTeamsConstraint(teams, self._data, self._team_col))
+        for team in teams:
+            self.set_max_from_team(0, team)
 
-    def must_include_team(self, team: str):
+    def set_must_include_team(self, team: str):
         """
         Specifies that a lineup must include a player from a given team.
 
@@ -231,7 +233,7 @@ class LineupOptimizer:
         log.warning(f"Must include team: {team}")
         self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
 
-    def include_player(self, **kwargs) -> None:
+    def set_must_include_player(self, **kwargs) -> None:
         """
         Specifies that a lineup must include a player identified by either name or id.
         Either name or id must be provided in kwargs.
@@ -247,7 +249,7 @@ class LineupOptimizer:
         log.warning(f"Including player by name/id {key}")
         self._add_constraint(constraints.IncludePlayerConstraint(key, self._data, col))
 
-    def exclude_player(self, **kwargs) -> None:
+    def set_exclude_player(self, **kwargs) -> None:
         """
         Specifies that a lineup must exclude a player identified by name.
 
@@ -261,6 +263,30 @@ class LineupOptimizer:
             raise InvalidConstraintException(f"{key} not found in data frame's {col} column")
         log.warning(f"Excluding player by name/id {key}")
         self._add_constraint(constraints.ExcludePlayerConstraint(key, self._data, col))
+
+    def set_max_from_team(self, maximum: int, team: str) -> None:
+        """
+        Set the maximum number of players that can be included in an optimized lineup from a particular team.
+
+        :param maximum: the maximum number of players that can be included from a particular team
+        :param team: the name of the team
+        :return: None
+        :raises: ValueError if maximum or team are invalid
+        """
+        if maximum is None or maximum < 0:
+            raise ValueError('Invalid maximum players')
+        if team is None or team not in self._data[self._team_col].unique():
+            raise ValueError('Invalid team name')
+        self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum, team, self._data, self._team_col))
+
+    def set_min_from_team(self, minimum: int, team: str) -> None:
+        raise NotImplementedError()
+
+    def set_include_qb_receiver_stack(self) -> None:
+        raise NotImplementedError()
+
+    def set_include_rb_def_stack(self) -> None:
+        raise NotImplementedError()
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """

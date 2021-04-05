@@ -139,53 +139,10 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):  # TODO: parent class for te
         :param constraints: The list of constraints to validate against.
         :return: A bool indicating whether the lineup can be added.
         """
-        for constraint in constraints:
-            if type(constraint) is ExcludeTeamsConstraint:
-                if any([t in constraint.teams for t in self.teams]):  # check if any teams to consider are excluded
-                    return False
-        return True
-
-
-class ExcludeTeamsConstraint(LineupConstraint):
-    """
-    A constraint used to exclude players who play for specified teams.
-    """
-
-    def __init__(self, teams: List[str], data: pd.DataFrame, team_column: str):
-        """
-        :param teams: The list of teams to exclude from consideration.
-        :param data: The player data frame.
-        :param team_column: The data frame's team column label.
-        """
-        self.teams = teams
-        self.data = data
-        self.team_column = team_column
-
-    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
-        """
-        Checks that players who play for one of the specified teams are not included in the lineup.
-
-        :param problem: The LP Problem variable for which to apply the rule.
-        :param index_to_lp_variable_dict: The player index to lp variable mapping.
-        :return: None
-        """
-        index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_column)
-        for k, v in index_to_lp_variable_dict.items():
-            if index_to_team_dict[k] in self.teams:
-                problem += v == 0
-
-    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
-        """
-        Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
-        This method will check whether any constraints exist which include a team that is to be excluded.
-
-        :param constraints: The list of constraints to validate against.
-        :return: A bool indicating whether the lineup can be added.
-        """
-        for constraint in constraints:
-            if type(constraint) is OnlyIncludeTeamsConstraint:
-                if any([t in constraint.teams for t in self.teams]):  # check if any teams to exclude are included
-                    return False
+        # for constraint in constraints:
+        #     if type(constraint) is ExcludeTeamsConstraint:
+        #         if any([t in constraint.teams for t in self.teams]):  # check if any teams to consider are excluded
+        #             return False
         return True
 
 
@@ -227,9 +184,9 @@ class MustIncludeTeamConstraint(LineupConstraint):
         :return: False if a constraint to exclude the specified team exists.
         """
         for constraint in constraints:
-            if type(constraint) is ExcludeTeamsConstraint:
-                if self.team in constraint.teams:
-                    return False
+            if type(constraint) is MaxPlayersFromTeamConstraint:
+                if self.team == constraint.team and constraint.maximum == 0:
+                    return False  # check if already set max from this team to zero
         return True
 
 
@@ -275,5 +232,29 @@ class ExcludePlayerConstraint(LineupConstraint):
         for constraint in constraints:
             if type(constraint) is IncludePlayerConstraint:
                 if self.player == constraint.player:
+                    return False
+        return True
+
+
+class MaxPlayersFromTeamConstraint(LineupConstraint):
+
+    def __init__(self, maximum: int, team: str, data: pd.DataFrame, team_col: str):
+        self.maximum = maximum
+        self.team = team
+        self.data = data
+        self.team_col = team_col
+
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
+        index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_col)
+        lp_vars_for_team = []
+        for k, v in index_to_lp_variable_dict.items():
+            if index_to_team_dict[k] == self.team:
+                lp_vars_for_team.append(v)
+        problem += lpSum(lp_vars_for_team) <= self.maximum
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        for constraint in constraints:
+            if type(constraint) is MaxPlayersFromTeamConstraint:
+                if constraint.team == self.team and constraint.maximum != self.maximum:
                     return False
         return True
