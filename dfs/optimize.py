@@ -1,16 +1,21 @@
 import csv
+import logging
 from collections.abc import Mapping
 from typing import AbstractSet, List, Union, Iterator
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 
-from pygskin import constraints
-from pygskin import file_utils
-from pygskin import positions, data_frame_utils, pulp_utils
-from pygskin import sites
-from pygskin.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
-from pygskin.schedule import ScheduleType
+from dfs import constraints
+from dfs import file_utils
+from dfs import positions, data_frame_utils, pulp_utils
+from dfs import sites
+from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
+from dfs.schedule import ScheduleType
+
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 class OptimizedLineup:
@@ -42,6 +47,7 @@ class OptimizedLineup:
         """
         if file_path is None:
             raise ValueError('File path cannot be none')
+        log.info(f"Writing optimized lineup to {file_path}")
         extension = file_utils.get_extension(file_path)
         if extension != '.csv':
             raise ValueError(f"Only CSV output is supported, found: {extension}")
@@ -196,6 +202,7 @@ class LineupOptimizer:
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Included teams must not be none or empty')
+        log.warning(f"Only include teams: {teams}")
         self._add_constraint(constraints.OnlyIncludeTeamsConstraint(teams, self._data, self._team_col))
 
     def exclude_teams(self, teams: List[str]) -> None:
@@ -208,6 +215,7 @@ class LineupOptimizer:
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Teams to exclude must not be none or empty')
+        log.warning(f"Excluding teams: {teams}")
         self._add_constraint(constraints.ExcludeTeamsConstraint(teams, self._data, self._team_col))
 
     def must_include_team(self, team: str):
@@ -220,6 +228,7 @@ class LineupOptimizer:
         """
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError(f"{team} not found in data frame")
+        log.warning(f"Must include team: {team}")
         self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
 
     def include_player(self, **kwargs) -> None:
@@ -235,6 +244,7 @@ class LineupOptimizer:
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise InvalidConstraintException(f"{key} not found in data frame's {col} column")
+        log.warning(f"Including player by name/id {key}")
         self._add_constraint(constraints.IncludePlayerConstraint(key, self._data, col))
 
     def exclude_player(self, **kwargs) -> None:
@@ -249,6 +259,7 @@ class LineupOptimizer:
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise InvalidConstraintException(f"{key} not found in data frame's {col} column")
+        log.warning(f"Excluding player by name/id {key}")
         self._add_constraint(constraints.ExcludePlayerConstraint(key, self._data, col))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
@@ -259,7 +270,9 @@ class LineupOptimizer:
         :return: None
         :raises: InvalidConstraintException if the constraint is not valid
         """
+        log.info('Adding a constraint')
         if constraint.is_valid(self._constraints):
+            log.info('The constraint is valid')
             self._constraints.append(constraint)
         else:
             raise InvalidConstraintException(f"The {str(type(constraint))} constraint is not valid")
@@ -270,6 +283,7 @@ class LineupOptimizer:
 
         :return: None
         """
+        log.info('Clearing constraints')
         self._constraints = []
 
     def optimize_lineup(self,

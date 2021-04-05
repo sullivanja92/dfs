@@ -1,6 +1,6 @@
 import unittest
 
-from pygskin.positions import Position, normalize_position
+from dfs.positions import Position, normalize_position
 
 
 class TestPositions(unittest.TestCase):

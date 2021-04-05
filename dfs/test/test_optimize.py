@@ -1,9 +1,9 @@
 import unittest
 
-from pygskin import data
-from pygskin.exceptions import InvalidDataFrameException, InvalidConstraintException
-from pygskin.optimize import LineupOptimizer
-from pygskin.sites import Site
+from dfs import data
+from dfs.exceptions import InvalidDataFrameException, InvalidConstraintException
+from dfs.optimize import LineupOptimizer
+from dfs.sites import Site
 
 
 class TestLineupOptimizer(unittest.TestCase):

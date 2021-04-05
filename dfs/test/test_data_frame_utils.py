@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from pygskin import data_frame_utils
+from dfs import data_frame_utils
 
 
 class TestDataFrameUtils(unittest.TestCase):

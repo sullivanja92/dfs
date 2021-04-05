@@ -4,7 +4,7 @@ from typing import Dict, List
 import pandas as pd
 from pulp import LpProblem, LpVariable, lpSum
 
-from pygskin import data_frame_utils
+from dfs import data_frame_utils
 
 
 class LineupConstraint(ABC):

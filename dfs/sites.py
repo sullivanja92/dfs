@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Dict, Tuple
 
-from pygskin import positions
+from dfs import positions
 
 
 class Site(Enum):

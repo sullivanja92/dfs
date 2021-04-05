@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from pygskin.schedule import ScheduleType
+from dfs.schedule import ScheduleType
 
 
 class TestSchedule(unittest.TestCase):

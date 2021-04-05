@@ -1,6 +1,6 @@
 import unittest
 
-from pygskin import data
+from dfs import data
 
 
 class TestData(unittest.TestCase):
