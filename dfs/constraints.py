@@ -7,6 +7,9 @@ from pulp import LpProblem, LpVariable, lpSum
 from dfs import data_frame_utils
 
 
+# TODO: return tuple (bool, message) from is_valid methods
+# TODO: return lp affine expression from apply methods
+
 class LineupConstraint(ABC):
     """
     Abstract base class representing a fantasy lineup constraint.
@@ -24,7 +27,7 @@ class LineupConstraint(ABC):
         pass
 
     @abstractmethod
-    def is_valid(self, constraints: List['LineupConstraint']) -> bool:  # TODO: return tuple (bool, message)
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
         """
         Checks whether the given lineup constraint can be added to a lineup optimizer based on current constraints.
 
@@ -66,19 +69,28 @@ class LineupSizeConstraint(LineupConstraint):
         return True
 
 
+class MaxSalaryCapConstraint(LineupConstraint):
+    pass
+
+
+class MinSalaryCapConstraint(LineupConstraint):
+    pass
+
+
 class SalaryCapConstraint(LineupConstraint):
     """
     A salary cap-based constraint.
     """
 
-    def __init__(self, salary_cap: int,
-                 index_to_salary_dict: Dict[int, int]):
+    def __init__(self, salary_cap: int, data: pd.DataFrame, salary_col: str):
         """
         :param salary_cap: The salary cap.
-        :param index_to_salary_dict:  A dict containing index to salary mappings.
+        :param data: The player data frame.
+        :param salary_col: The name of the data frame's salary column
         """
         self.salary_cap = salary_cap
-        self.index_to_salary_dict = index_to_salary_dict
+        self.data = data
+        self.salary_col = salary_col
 
     def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
         """
@@ -88,7 +100,8 @@ class SalaryCapConstraint(LineupConstraint):
         :param index_to_lp_variable_dict: The player index to lp variable mapping.
         :return: None
         """
-        costs = [self.index_to_salary_dict[i] * index_to_lp_variable_dict[i]
+        index_to_salary_dict = data_frame_utils.map_index_to_col(self.data, self.salary_col)
+        costs = [index_to_salary_dict[i] * index_to_lp_variable_dict[i]
                  for i in index_to_lp_variable_dict.keys()]
         problem += lpSum(costs) <= self.salary_cap
 
@@ -256,5 +269,57 @@ class MaxPlayersFromTeamConstraint(LineupConstraint):
         for constraint in constraints:
             if type(constraint) is MaxPlayersFromTeamConstraint:
                 if constraint.team == self.team and constraint.maximum != self.maximum:
+                    return False
+        return True
+
+
+class MinPlayersFromTeamConstraint(LineupConstraint):
+    """
+    A constraint specifying that an optimized lineup must contain a minimum number of players from a given team.
+    """
+
+    def __init__(self, minimum: int, team: str, data: pd.DataFrame, team_col: str):
+        """
+        Constructor
+        :param minimum: the minimum number of players from the team that must be included
+        :param team: the name of the team
+        :param data: the player data frame
+        :param team_col: the data frame's team column name
+        """
+        self.minimum = minimum
+        self.team = team
+        self.data = data
+        self.team_col = team_col
+
+    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
+        """
+        Applies the constraint.
+
+        :param problem: the lp problem
+        :param index_to_lp_variable_dict: the index to lp variable dict
+        :return: None
+        """
+        index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_col)
+        lp_vars_for_team = []
+        for k, v in index_to_lp_variable_dict.items():
+            if index_to_team_dict[k] == self.team:
+                lp_vars_for_team.append(v)
+        problem += lpSum(lp_vars_for_team) >= self.minimum
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
+        """
+        Returns false if any of the below conditions are satisfied:
+        1. A MinPlayersFromTeamConstraint is already included for this team
+        2. A MaxPlayersFromTeamConstraint is already included for this team with value less than this minimum
+
+        :param constraints: the list of existing lineup constraints
+        :return: True if the constraint is valid
+        """
+        for constraint in constraints:
+            if type(constraint) is MinPlayersFromTeamConstraint:
+                if constraint.team == self.team:
+                    return False
+            if type(constraint) is MaxPlayersFromTeamConstraint:
+                if constraint.team == self.team and constraint.maximum < self.minimum:
                     return False
         return True

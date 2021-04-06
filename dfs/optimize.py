@@ -221,7 +221,7 @@ class LineupOptimizer:
         for team in teams:
             self.set_max_from_team(0, team)
 
-    def set_must_include_team(self, team: str):
+    def set_must_include_team(self, team: str):  # TODO: use set min from team to 1
         """
         Specifies that a lineup must include a player from a given team.
 
@@ -267,7 +267,7 @@ class LineupOptimizer:
 
     def set_max_from_team(self, maximum: int, team: str) -> None:
         """
-        Set the maximum number of players that can be included in an optimized lineup from a particular team.
+        Sets the maximum number of players that can be included in an optimized lineup from a particular team.
 
         :param maximum: the maximum number of players that can be included from a particular team
         :param team: the name of the team
@@ -281,7 +281,21 @@ class LineupOptimizer:
         self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum, team, self._data, self._team_col))
 
     def set_min_from_team(self, minimum: int, team: str) -> None:
-        raise NotImplementedError()
+        """
+        Sets the minimum number of players from a given team that must be included in an optimized lineup.
+
+        :param minimum: the minimum number of players from the specified team that must be included
+        :param team: the name of the team
+        :return: None
+        :raises: ValueError if minimum or team are invalid
+        """
+        if minimum is None or all([minimum > s.num_players() for s in list(sites.Site)]):
+            raise ValueError('Invalid minimum number of players')
+        if team is None or team not in self._data[self._team_col].unique():
+            raise ValueError('Invalid team name')
+        if minimum == 0:
+            return
+        self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum, team, self._data, self._team_col))
 
     def set_max_salary(self, maximum: Number) -> None:
         raise NotImplementedError()
@@ -352,11 +366,9 @@ class LineupOptimizer:
         df.dropna(subset=[self._points_col, self.salary_col], inplace=True)  # TODO: include more columns?
         if schedule_type is not None:
             df = df[df[self.datetime_col].apply(lambda x: schedule_type.matches(x))]  # filter data based on schedule
-        salaries = {}  # index/salary dicts mapped to position
         points = {}  # index/points dicts mapped to position
         for position in position_constraints.keys():
             players = df[df[self.position_col] == position]  # players for current position
-            salaries[position] = data_frame_utils.map_index_to_col(players, self.salary_col)
             points[position] = data_frame_utils.map_index_to_col(players, self._points_col)
         position_to_index_dict = {k: LpVariable.dict(k.value, v, cat='Binary') for k, v in points.items()}
         problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
@@ -366,11 +378,10 @@ class LineupOptimizer:
             constraints_for_position = position_constraints[k]
             problem += lpSum([position_to_index_dict[k][i] for i in v]) >= constraints_for_position[0]
             problem += lpSum([position_to_index_dict[k][i] for i in v]) <= constraints_for_position[1]
-        index_to_variable_dict = data_frame_utils.merge_dicts(*position_to_index_dict.values())
-        index_to_salary_dict = data_frame_utils.merge_dicts(*salaries.values())
-        constraints.LineupSizeConstraint(site.num_players()).apply(problem, index_to_variable_dict)
-        constraints.SalaryCapConstraint(site.salary_cap(), index_to_salary_dict).apply(problem, index_to_variable_dict)
         problem += lpSum(rewards)
+        index_to_variable_dict = data_frame_utils.merge_dicts(*position_to_index_dict.values())
+        constraints.LineupSizeConstraint(site.num_players()).apply(problem, index_to_variable_dict)
+        constraints.SalaryCapConstraint(site.salary_cap(), df, self._salary_col).apply(problem, index_to_variable_dict)
         for constraint in self._constraints:
             constraint.apply(problem, index_to_variable_dict)
         problem.solve(PULP_CBC_CMD(msg=False))

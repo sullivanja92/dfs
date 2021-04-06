@@ -242,3 +242,30 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.set_max_from_team(3, None)
         with self.assertRaises(ValueError):
             optimizer.set_max_from_team(3, 'MISSING')
+
+    def test_min_from_team(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 2],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 293.5)
+        self.assertEqual(lineup.salary, 50_000)
+        with self.assertRaises(ValueError):  # min is none
+            optimizer.set_min_from_team(None, 'CIN')
+        with self.assertRaises(ValueError):  # min is too large
+            optimizer.set_min_from_team(100, 'CIN')
+        with self.assertRaises(ValueError):  # team is none
+            optimizer.set_min_from_team(3, None)
+        with self.assertRaises(ValueError):  # team is missing
+            optimizer.set_min_from_team(3, 'MISSING')
+        optimizer.set_max_from_team(3, 'CIN')
+        with self.assertRaises(InvalidConstraintException):  # constraints already include max that's less than min
+            optimizer.set_min_from_team(4, 'CIN')
+        optimizer.clear_constraints()
+        optimizer.set_min_from_team(2, 'CIN')
+        with self.assertRaises(InvalidConstraintException):  # min constraint for this team already included
+            optimizer.set_min_from_team(3, 'CIN')
+        optimizer.clear_constraints()
+        optimizer.set_min_from_team(2, 'CIN')  # include at least two bengals
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(sum([1 for p in lineup.players if p.team == 'CIN']), 2)
