@@ -159,50 +159,6 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):  # TODO: parent class for te
         return True
 
 
-class MustIncludeTeamConstraint(LineupConstraint):
-    """
-    A constraint used to specify that an optimized lineup must include at least one player from a given team.
-    """
-
-    def __init__(self, team: str, data: pd.DataFrame, team_column: str):
-        """
-        :param team: The team that must be included.
-        :param data: The player data frame.
-        :param team_column: The team column label.
-        """
-        self.team = team
-        self.data = data
-        self.team_column = team_column
-
-    def apply(self, problem: LpProblem, index_to_lp_variable_dict: Dict[int, LpVariable]) -> None:
-        """
-        Checks that at least one player from the specified team is included in the lineup.
-
-        :param problem: The LP Problem variable.
-        :param index_to_lp_variable_dict: The mapping of index to lp variable.
-        :return: None
-        """
-        index_to_team_dict = data_frame_utils.map_index_to_col(self.data, self.team_column)
-        lp_vars_for_team = []
-        for k, v in index_to_lp_variable_dict.items():
-            if index_to_team_dict[k] == self.team:
-                lp_vars_for_team.append(v)
-        problem += lpSum(lp_vars_for_team) >= 1
-
-    def is_valid(self, constraints: List['LineupConstraint']) -> bool:
-        """
-        Checks whether or not a constraint to exclude the specified team already exists.
-
-        :param constraints: The list of lineup constraints.
-        :return: False if a constraint to exclude the specified team exists.
-        """
-        for constraint in constraints:
-            if type(constraint) is MaxPlayersFromTeamConstraint:
-                if self.team == constraint.team and constraint.maximum == 0:
-                    return False  # check if already set max from this team to zero
-        return True
-
-
 class IncludePlayerConstraint(LineupConstraint):
 
     def __init__(self, player: str, data: pd.DataFrame, name_col: str):

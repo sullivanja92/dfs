@@ -221,7 +221,7 @@ class LineupOptimizer:
         for team in teams:
             self.set_max_from_team(0, team)
 
-    def set_must_include_team(self, team: str):  # TODO: use set min from team to 1
+    def set_must_include_team(self, team: str):
         """
         Specifies that a lineup must include a player from a given team.
 
@@ -229,10 +229,8 @@ class LineupOptimizer:
         :return: None
         :raises: ValueError if team is none or not found in data frame.
         """
-        if team is None or team not in self._data[self._team_col].unique():
-            raise ValueError(f"{team} not found in data frame")
         log.warning(f"Must include team: {team}")
-        self._add_constraint(constraints.MustIncludeTeamConstraint(team, self._data, self._team_col))
+        self.set_min_from_team(1, team)
 
     def set_must_include_player(self, **kwargs) -> None:
         """
