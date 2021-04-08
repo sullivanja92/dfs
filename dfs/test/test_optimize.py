@@ -164,9 +164,9 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.points, 316.98)
         self.assertEqual(lineup.salary, 49700)
         # test include by name
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_must_include_player(name=None)
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_must_include_player(name='Missing Player')
         optimizer.set_must_include_player(name='Aaron Rodgers')
         lineup = optimizer.optimize_lineup(site='dk')
@@ -175,9 +175,9 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.salary, 49600)
         # test include by id
         optimizer.clear_constraints()
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_must_include_player(id=None)
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_must_include_player(id='Missing ID')
         optimizer.set_must_include_player(id=1416)
         lineup = optimizer.optimize_lineup(site='dk')
@@ -193,7 +193,7 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.points, 316.98)
         self.assertEqual(lineup.salary, 49700)
         # test include by name
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_exclude_player(name='Missing Player')
         self.assertTrue('Joe Mixon' in [p.name for p in lineup.players])
         optimizer.set_exclude_player(name='Joe Mixon')
@@ -201,13 +201,13 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.points, 295.08)
         self.assertEqual(lineup.salary, 50000)
         self.assertFalse('Joe Mixon' in [p.name for p in lineup.players])
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_exclude_player(name=None)
         # test include by id
         optimizer.clear_constraints()
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_exclude_player(id=None)
-        with self.assertRaises(InvalidConstraintException):
+        with self.assertRaises(ValueError):
             optimizer.set_exclude_player(id='Missing ID')
         optimizer.set_exclude_player(id=1453)
         lineup = optimizer.optimize_lineup(site='dk')
@@ -343,3 +343,6 @@ class TestLineupOptimizer(unittest.TestCase):
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(sum([1 for p in lineup.players if p.team == 'GB']), 4)
         self.assertEqual(sum([1 for p in lineup.players if p.team == 'DET']), 2)
+
+    def test_qb_wr_stack(self):
+        pass
