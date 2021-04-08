@@ -107,6 +107,11 @@ class TestLineupOptimizer(unittest.TestCase):
         with self.assertRaises(ValueError):
             optimizer.set_only_include_teams([])
         teams = ['ATL', 'CAR', 'NO', 'TB']
+        for team in teams:
+            optimizer.set_max_from_team(0, team)
+        with self.assertRaises(InvalidConstraintException):  # all teams already excluded
+            optimizer.set_only_include_teams(teams)
+        optimizer.clear_constraints()
         optimizer.set_only_include_teams(teams)
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertTrue(all([x['team'] in teams for x in lineup.players]))
@@ -234,6 +239,10 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.set_max_from_team(0, 'CHI')
             optimizer.set_max_from_team(1, 'CHI')
         optimizer.clear_constraints()
+        optimizer.set_min_from_team(3, 'CHI')
+        with self.assertRaises(InvalidConstraintException):  # min from this team already set to greater value
+            optimizer.set_max_from_team(2, 'CHI')
+        optimizer.clear_constraints()
         with self.assertRaises(ValueError):
             optimizer.set_max_from_team(None, 'CHI')
         with self.assertRaises(ValueError):
@@ -269,3 +278,68 @@ class TestLineupOptimizer(unittest.TestCase):
         optimizer.set_min_from_team(2, 'CIN')  # include at least two bengals
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(sum([1 for p in lineup.players if p.team == 'CIN']), 2)
+
+    def test_max_salary(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 3],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 314.5)
+        self.assertEqual(lineup.salary, 49700)
+        with self.assertRaises(ValueError):
+            optimizer.set_max_salary(None)
+        with self.assertRaises(ValueError):
+            optimizer.set_max_salary(0)
+        optimizer.set_min_salary(45_000)
+        with self.assertRaises(InvalidConstraintException):  # set max that's below min
+            optimizer.set_max_salary(40_000)
+        optimizer.clear_constraints()
+        optimizer.set_max_salary(40_000)
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertLessEqual(lineup.salary, 40_000)
+        self.assertEqual(lineup.points, 279.6)
+
+    def test_min_salary(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 316.98)
+        self.assertEqual(lineup.salary, 49700)
+        with self.assertRaises(ValueError):
+            optimizer.set_min_salary(None)
+        with self.assertRaises(ValueError):
+            optimizer.set_min_salary(100_000)
+        optimizer.set_max_salary(45_000)
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_min_salary(46_000)
+        optimizer.clear_constraints()
+        optimizer.set_min_salary(50_000)
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.salary, 50_000)
+        self.assertEqual(lineup.points, 308.26)
+
+    def test_num_players_from_team(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 316.98)
+        self.assertEqual(lineup.salary, 49700)
+        with self.assertRaises(ValueError):
+            optimizer.set_num_players_from_team(None, 'GB')
+        with self.assertRaises(ValueError):
+            optimizer.set_num_players_from_team(15, 'GB')
+        with self.assertRaises(ValueError):
+            optimizer.set_num_players_from_team(3, None)
+        with self.assertRaises(ValueError):
+            optimizer.set_num_players_from_team(3, 'MISSING')
+        optimizer.set_min_from_team(4, 'GB')
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_num_players_from_team(3, 'GB')
+        optimizer.clear_constraints()
+        optimizer.set_num_players_from_team(4, 'GB')
+        optimizer.set_num_players_from_team(2, 'DET')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(sum([1 for p in lineup.players if p.team == 'GB']), 4)
+        self.assertEqual(sum([1 for p in lineup.players if p.team == 'DET']), 2)

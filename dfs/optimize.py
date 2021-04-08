@@ -1,7 +1,6 @@
 import csv
 import logging
 from collections.abc import Mapping
-from numbers import Number
 from typing import AbstractSet, List, Union, Iterator
 
 import pandas as pd
@@ -263,6 +262,26 @@ class LineupOptimizer:
         log.warning(f"Excluding player by name/id {key}")
         self._add_constraint(constraints.ExcludePlayerConstraint(key, self._data, col))
 
+    def set_num_players_from_team(self, n: int, team: str):
+        """
+        Sets the number of players from a team that an optimized lineup must include.
+
+        :param n: the number of players
+        :param team: the team name
+        :return: None
+        :raises: ValueError if number of players or team are invalid
+        """
+        if n is None or all([n > s.num_players() for s in list(sites.Site)]):
+            raise ValueError('Invalid number of players')
+        if team is None or team not in self._data[self._team_col].unique():
+            raise ValueError('Invalid team name')
+        self._add_constraint(constraints.MaxPlayersFromTeamConstraint(n, team, self._data, self._team_col))
+        try:
+            self._add_constraint(constraints.MinPlayersFromTeamConstraint(n, team, self._data, self._team_col))
+        except InvalidConstraintException:
+            self._constraints.pop()  # remove max players constraint if this one fails
+            raise
+
     def set_max_from_team(self, maximum: int, team: str) -> None:
         """
         Sets the maximum number of players that can be included in an optimized lineup from a particular team.
@@ -295,11 +314,29 @@ class LineupOptimizer:
             return
         self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum, team, self._data, self._team_col))
 
-    def set_max_salary(self, maximum: Number) -> None:
-        raise NotImplementedError()
+    def set_max_salary(self, maximum: int) -> None:
+        """
+        Sets the maximum salary that can be used in an optimized lineup.
 
-    def set_minimum_salary(self, minimum: Number) -> None:
-        raise NotImplementedError()
+        :param maximum: the max salary.
+        :return: None
+        :raises: ValueError if maximum is invalid
+        """
+        if maximum is None or maximum <= 0:
+            raise ValueError('Invalid maximum')
+        self._add_constraint(constraints.MaxSalaryCapConstraint(maximum, self._data, self._salary_col))
+
+    def set_min_salary(self, minimum: int) -> None:
+        """
+        Sets the minimum salary that can be used in an optimized lineup.
+
+        :param minimum: the minimum salary
+        :return: None
+        :raises: ValueError if minimum is invalid
+        """
+        if minimum is None or all([minimum > s.salary_cap() for s in list(sites.Site)]):
+            raise ValueError('Invalid minimum')
+        self._add_constraint(constraints.MinSalaryCapConstraint(minimum, self._data, self._salary_col))
 
     def set_include_qb_receiver_stack(self) -> None:
         raise NotImplementedError()
@@ -316,11 +353,12 @@ class LineupOptimizer:
         :raises: InvalidConstraintException if the constraint is not valid
         """
         log.info('Adding a constraint')
-        if constraint.is_valid(self._constraints):
+        is_valid, message = constraint.is_valid(self._constraints)
+        if is_valid:
             log.info('The constraint is valid')
             self._constraints.append(constraint)
         else:
-            raise InvalidConstraintException(f"The {str(type(constraint))} constraint is not valid")
+            raise InvalidConstraintException(f"Invalid constraint: {message}")
 
     def clear_constraints(self) -> None:
         """
@@ -378,10 +416,11 @@ class LineupOptimizer:
             problem += lpSum([position_to_index_dict[k][i] for i in v]) <= constraints_for_position[1]
         problem += lpSum(rewards)
         index_to_variable_dict = data_frame_utils.merge_dicts(*position_to_index_dict.values())
-        constraints.LineupSizeConstraint(site.num_players()).apply(problem, index_to_variable_dict)
-        constraints.SalaryCapConstraint(site.salary_cap(), df, self._salary_col).apply(problem, index_to_variable_dict)
+        problem += constraints.LineupSizeConstraint(site.num_players()).apply(index_to_variable_dict)
+        problem += constraints.MaxSalaryCapConstraint(site.salary_cap(), df, self._salary_col)\
+            .apply(index_to_variable_dict)
         for constraint in self._constraints:
-            constraint.apply(problem, index_to_variable_dict)
+            problem += constraint.apply(index_to_variable_dict)
         problem.solve(PULP_CBC_CMD(msg=False))
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
