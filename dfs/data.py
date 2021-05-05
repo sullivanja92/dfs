@@ -4,6 +4,7 @@ import pandas as pd
 from numpy import nan
 
 
+#  TODO: should be able to provide week for single week df
 def load_2020_data(weeks: List[int] = range(1, 5)) -> pd.DataFrame:  # TODO: correct dk and fd points
     """
     This function is used to provide sample data from the 2019 season.

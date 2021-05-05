@@ -15,8 +15,7 @@ setuptools.setup(
     packages=['dfs'],
     install_requires=[
         'pandas',
-        'pulp',
-        'scrapy'
+        'pulp'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
