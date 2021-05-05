@@ -19,12 +19,24 @@ TODO
 `optimizer = LineupOptimizer(data=data, points_col='dk_points', salary_col='dk_salary')`
 
 ### Add constraints
-`optimizer.set_only_include_teams(teams=['CHI', 'DET', 'GB', 'MIN'])  # only include NFC North teams for consideration`<br/>
-`optimizer.set_exclude_teams(teams=['DAL', 'NYG', 'PHI', 'WAS'])  # exclude NFC East teams from consideration`<br/>
-`optimizer.set_must_include_player(name='Aaron Rodgers')  # ensure that Aaron Rodgers is included in the optimized lineup`<br/>
-`optimizer.set_exclude_player(name='Mitch Trubisky')  # ensure that Mitch Trubisky is excluded from the optized lineup`<br/>
-`optimizer.set_qb_receiver_stack(team='SF')  # ensure that the optimized lineup includes a qb/receiver stack from San Francisco`<br/>
-`optimizer.clear_constraints()  # clear any constraints for this optimizer`
+
+#### Only include specified teams
+`optimizer.set_only_include_teams(teams=['CHI', 'DET', 'GB', 'MIN'])`<br/>
+
+#### Exclude specified teams
+`optimizer.set_exclude_teams(teams=['DAL', 'NYG', 'PHI', 'WAS'])`<br/>
+
+#### Include a specified player
+`optimizer.set_must_include_player(name='Aaron Rodgers')`<br/>
+
+#### Exclude a specified player
+`optimizer.set_exclude_player(name='Mitch Trubisky')`<br/>
+
+#### Add stacks
+`optimizer.set_qb_receiver_stack(team='SF')`<br/>
+
+#### Clear current constraints
+`optimizer.clear_constraints()`
 
 ### Generate lineup
 `lineup = optimizer.optimize_lineup(site='dk')`<br/>
