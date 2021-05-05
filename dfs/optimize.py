@@ -1,5 +1,4 @@
 import csv
-import logging
 from collections.abc import Mapping
 from typing import AbstractSet, List, Union, Iterator
 
@@ -12,10 +11,6 @@ from dfs import positions, data_frame_utils, pulp_utils
 from dfs import sites
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from dfs.schedule import ScheduleType
-
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
 
 
 class OptimizedLineup:
@@ -47,7 +42,6 @@ class OptimizedLineup:
         """
         if file_path is None:
             raise ValueError('File path cannot be none')
-        log.info(f"Writing optimized lineup to {file_path}")
         extension = file_utils.get_extension(file_path)
         if extension != '.csv':
             raise ValueError(f"Only CSV output is supported, found: {extension}")
@@ -204,8 +198,9 @@ class LineupOptimizer:
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Included teams must not be none or empty')
-        log.warning(f"Only include teams: {teams}")
-        self._add_constraint(constraints.OnlyIncludeTeamsConstraint(teams, self._team_col, self._LP_VAR_COL))
+        self._add_constraint(constraints.OnlyIncludeTeamsConstraint(teams=teams,
+                                                                    team_column=self._team_col,
+                                                                    lp_var_col=self._LP_VAR_COL))
 
     def set_exclude_teams(self, teams: List[str]) -> None:
         """
@@ -217,9 +212,8 @@ class LineupOptimizer:
         """
         if teams is None or len(teams) == 0:
             raise ValueError('Teams to exclude must not be none or empty')
-        log.warning(f"Excluding teams: {teams}")
         for team in teams:
-            self.set_max_from_team(0, team)
+            self.set_max_players_from_team(n=0, team=team)
 
     def set_must_include_team(self, team: str):
         """
@@ -229,10 +223,9 @@ class LineupOptimizer:
         :return: None
         :raises: ValueError if team is none or not found in data frame.
         """
-        log.warning(f"Must include team: {team}")
-        self.set_min_from_team(1, team)
+        self.set_min_players_from_team(n=1, team=team)
 
-    def set_must_include_player(self, **kwargs) -> None:
+    def set_must_include_player(self, **kwargs) -> None:  # TODO: refactor following two methods for explicit id or name
         """
         Specifies that a lineup must include a player identified by either name or id.
         Either name or id must be provided in kwargs.
@@ -245,8 +238,9 @@ class LineupOptimizer:
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
-        log.warning(f"Including player by name/id {key}")
-        self._add_constraint(constraints.IncludePlayerConstraint(key, col, self._LP_VAR_COL))
+        self._add_constraint(constraints.IncludePlayerConstraint(player=key,
+                                                                 name_col=col,
+                                                                 lp_var_col=self._LP_VAR_COL))
 
     def set_exclude_player(self, **kwargs) -> None:
         """
@@ -260,8 +254,9 @@ class LineupOptimizer:
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
-        log.warning(f"Excluding player by name/id {key}")
-        self._add_constraint(constraints.ExcludePlayerConstraint(key, col, self._LP_VAR_COL))
+        self._add_constraint(constraints.ExcludePlayerConstraint(player=key,
+                                                                 name_col=col,
+                                                                 lp_var_col=self._LP_VAR_COL))
 
     def set_num_players_from_team(self, n: int, team: str):
         """
@@ -276,79 +271,101 @@ class LineupOptimizer:
             raise ValueError('Invalid number of players')
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
-        self._add_constraint(constraints.MaxPlayersFromTeamConstraint(n, team, self._team_col, self._LP_VAR_COL))
+        self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum=n,
+                                                                      team=team,
+                                                                      team_col=self._team_col,
+                                                                      lp_var_col=self._LP_VAR_COL))
         try:
-            self._add_constraint(constraints.MinPlayersFromTeamConstraint(n, team, self._team_col, self._LP_VAR_COL))
+            self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum=n,
+                                                                          team=team,
+                                                                          team_col=self._team_col,
+                                                                          lp_var_col=self._LP_VAR_COL))
         except InvalidConstraintException:
             self._constraints.pop()  # remove max players constraint if this one fails
             raise
 
-    def set_max_from_team(self, maximum: int, team: str) -> None:
+    def set_max_players_from_team(self, n: int, team: str) -> None:
         """
         Sets the maximum number of players that can be included in an optimized lineup from a particular team.
 
-        :param maximum: the maximum number of players that can be included from a particular team
+        :param n: the maximum number of players that can be included from a particular team
         :param team: the name of the team
         :return: None
         :raises: ValueError if maximum or team are invalid
         """
-        if maximum is None or maximum < 0:
+        if n is None or n < 0:
             raise ValueError('Invalid maximum players')
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
-        self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum, team, self._team_col, self._LP_VAR_COL))
+        self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum=n,
+                                                                      team=team,
+                                                                      team_col=self._team_col,
+                                                                      lp_var_col=self._LP_VAR_COL))
 
-    def set_min_from_team(self, minimum: int, team: str) -> None:
+    def set_min_players_from_team(self, n: int, team: str) -> None:
         """
         Sets the minimum number of players from a given team that must be included in an optimized lineup.
 
-        :param minimum: the minimum number of players from the specified team that must be included
+        :param n: the minimum number of players from the specified team that must be included
         :param team: the name of the team
         :return: None
         :raises: ValueError if minimum or team are invalid
         """
-        if minimum is None or all([minimum > s.num_players() for s in list(sites.Site)]):
+        if n is None or all([n > s.num_players() for s in list(sites.Site)]):
             raise ValueError('Invalid minimum number of players')
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
-        if minimum == 0:
+        if n == 0:
             return
-        self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum, team, self._team_col, self._LP_VAR_COL))
+        self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum=n,
+                                                                      team=team,
+                                                                      team_col=self._team_col,
+                                                                      lp_var_col=self._LP_VAR_COL))
 
-    def set_max_salary(self, maximum: int) -> None:
+    def set_max_salary(self, n: int) -> None:
         """
         Sets the maximum salary that can be used in an optimized lineup.
 
-        :param maximum: the max salary.
+        :param n: the max salary.
         :return: None
         :raises: ValueError if maximum is invalid
         """
-        if maximum is None or maximum <= 0:
+        if n is None or n <= 0:
             raise ValueError('Invalid maximum')
-        self._add_constraint(constraints.MaxSalaryCapConstraint(maximum, self._salary_col, self._LP_VAR_COL))
+        self._add_constraint(constraints.MaxSalaryCapConstraint(salary=n,
+                                                                salary_col=self._salary_col,
+                                                                lp_var_col=self._LP_VAR_COL))
 
-    def set_min_salary(self, minimum: int) -> None:
+    def set_min_salary(self, n: int) -> None:
         """
         Sets the minimum salary that can be used in an optimized lineup.
 
-        :param minimum: the minimum salary
+        :param n: the minimum salary
         :return: None
         :raises: ValueError if minimum is invalid
         """
-        if minimum is None or all([minimum > s.salary_cap() for s in list(sites.Site)]):
+        if n is None or all([n > s.salary_cap() for s in list(sites.Site)]):
             raise ValueError('Invalid minimum')
-        self._add_constraint(constraints.MinSalaryCapConstraint(minimum, self._salary_col, self._LP_VAR_COL))
+        self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
+                                                                salary_col=self._salary_col,
+                                                                lp_var_col=self._LP_VAR_COL))
 
-    def set_include_qb_wr_stack(self, team=None) -> None:
-        raise NotImplementedError()
+    def set_qb_receiver_stack(self, team: str) -> None:
+        """
+        Specifies that an optimized lineup should include a QB/receiver stack from a given team.
 
-    def set_include_qb_te_stack(self, team=None) -> None:
-        raise NotImplementedError()
+        :param team: the team name
+        :return: None
+        :raises: ValueError if team name is invalid
+        """
+        if team not in self._data[self._team_col].unique():
+            raise ValueError('Invalid team name')
+        self._add_constraint(constraints.QbReceiverStackConstraint(lp_var_col=self._LP_VAR_COL,
+                                                                   position_col=self._position_col,
+                                                                   team=team,
+                                                                   team_col=self._team_col))
 
-    def set_include_qb_receiver_stack(self, team=None) -> None:
-        raise NotImplementedError()
-
-    def set_include_rb_def_stack(self, team=None) -> None:
+    def set_rb_def_stack(self, team=None) -> None:
         raise NotImplementedError()
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
@@ -359,10 +376,8 @@ class LineupOptimizer:
         :return: None
         :raises: InvalidConstraintException if the constraint is not valid
         """
-        log.info('Adding a constraint')
         is_valid, message = constraint.is_valid(self._constraints)
         if is_valid:
-            log.info('The constraint is valid')
             self._constraints.append(constraint)
         else:
             raise InvalidConstraintException(f"Invalid constraint: {message}")
@@ -373,7 +388,6 @@ class LineupOptimizer:
 
         :return: None
         """
-        log.info('Clearing constraints')
         self._constraints = []
 
     def optimize_lineup(self, site: Union[sites.Site, str], schedule_type: ScheduleType = None) -> OptimizedLineup:
@@ -414,10 +428,11 @@ class LineupOptimizer:
             problem += lpSum(players[self._LP_VAR_COL]) >= v[0]
             problem += lpSum(players[self._LP_VAR_COL]) <= v[1]
         problem += lpSum(df[self._points_col] * df[self._LP_VAR_COL])
-        problem += constraints.LineupSizeConstraint(site.num_players(), self._LP_VAR_COL).apply(df)
-        problem += constraints.MaxSalaryCapConstraint(site.salary_cap(), self._salary_col, self._LP_VAR_COL).apply(df)
+        problem += constraints.LineupSizeConstraint(site.num_players(), self._LP_VAR_COL).apply(df)[0]
+        problem += constraints.MaxSalaryCapConstraint(site.salary_cap(), self._salary_col, self._LP_VAR_COL).apply(df)[0]
         for constraint in self._constraints:
-            problem += constraint.apply(df)
+            for c in constraint.apply(df):  # stack-related constraints may return multiple from apply()
+                problem += c
         problem.solve(PULP_CBC_CMD(msg=False))
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')

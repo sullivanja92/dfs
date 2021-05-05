@@ -108,7 +108,7 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.set_only_include_teams([])
         teams = ['ATL', 'CAR', 'NO', 'TB']
         for team in teams:
-            optimizer.set_max_from_team(0, team)
+            optimizer.set_max_players_from_team(0, team)
         with self.assertRaises(InvalidConstraintException):  # all teams already excluded
             optimizer.set_only_include_teams(teams)
         optimizer.clear_constraints()
@@ -223,34 +223,34 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.points, 314.5)
         self.assertEqual(lineup.salary, 49700)
         self.assertTrue(all(p in [player.name for player in lineup.players] for p in ['Allen Robinson', 'Jimmy Graham']))
-        optimizer.set_max_from_team(1, 'CHI')
+        optimizer.set_max_players_from_team(1, 'CHI')
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 314.1)
         self.assertEqual(lineup.salary, 48900)
         self.assertTrue('Jimmy Graham' in [player.name for player in lineup.players])
         optimizer.clear_constraints()
-        optimizer.set_max_from_team(0, 'CHI')
+        optimizer.set_max_players_from_team(0, 'CHI')
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 308.9)
         self.assertEqual(lineup.salary, 49800)
         self.assertFalse(any(p in [player.name for player in lineup.players] for p in ['Allen Robinson', 'Jimmy Graham']))
         optimizer.clear_constraints()
         with self.assertRaises(InvalidConstraintException):
-            optimizer.set_max_from_team(0, 'CHI')
-            optimizer.set_max_from_team(1, 'CHI')
+            optimizer.set_max_players_from_team(0, 'CHI')
+            optimizer.set_max_players_from_team(1, 'CHI')
         optimizer.clear_constraints()
-        optimizer.set_min_from_team(3, 'CHI')
+        optimizer.set_min_players_from_team(3, 'CHI')
         with self.assertRaises(InvalidConstraintException):  # min from this team already set to greater value
-            optimizer.set_max_from_team(2, 'CHI')
+            optimizer.set_max_players_from_team(2, 'CHI')
         optimizer.clear_constraints()
         with self.assertRaises(ValueError):
-            optimizer.set_max_from_team(None, 'CHI')
+            optimizer.set_max_players_from_team(None, 'CHI')
         with self.assertRaises(ValueError):
-            optimizer.set_max_from_team(-3, 'CHI')
+            optimizer.set_max_players_from_team(-3, 'CHI')
         with self.assertRaises(ValueError):
-            optimizer.set_max_from_team(3, None)
+            optimizer.set_max_players_from_team(3, None)
         with self.assertRaises(ValueError):
-            optimizer.set_max_from_team(3, 'MISSING')
+            optimizer.set_max_players_from_team(3, 'MISSING')
 
     def test_min_from_team(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 2],
@@ -260,22 +260,22 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(lineup.points, 293.5)
         self.assertEqual(lineup.salary, 50_000)
         with self.assertRaises(ValueError):  # min is none
-            optimizer.set_min_from_team(None, 'CIN')
+            optimizer.set_min_players_from_team(None, 'CIN')
         with self.assertRaises(ValueError):  # min is too large
-            optimizer.set_min_from_team(100, 'CIN')
+            optimizer.set_min_players_from_team(100, 'CIN')
         with self.assertRaises(ValueError):  # team is none
-            optimizer.set_min_from_team(3, None)
+            optimizer.set_min_players_from_team(3, None)
         with self.assertRaises(ValueError):  # team is missing
-            optimizer.set_min_from_team(3, 'MISSING')
-        optimizer.set_max_from_team(3, 'CIN')
+            optimizer.set_min_players_from_team(3, 'MISSING')
+        optimizer.set_max_players_from_team(3, 'CIN')
         with self.assertRaises(InvalidConstraintException):  # constraints already include max that's less than min
-            optimizer.set_min_from_team(4, 'CIN')
+            optimizer.set_min_players_from_team(4, 'CIN')
         optimizer.clear_constraints()
-        optimizer.set_min_from_team(2, 'CIN')
+        optimizer.set_min_players_from_team(2, 'CIN')
         with self.assertRaises(InvalidConstraintException):  # min constraint for this team already included
-            optimizer.set_min_from_team(3, 'CIN')
+            optimizer.set_min_players_from_team(3, 'CIN')
         optimizer.clear_constraints()
-        optimizer.set_min_from_team(2, 'CIN')  # include at least two bengals
+        optimizer.set_min_players_from_team(2, 'CIN')  # include at least two bengals
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(sum([1 for p in lineup.players if p.team == 'CIN']), 2)
 
@@ -334,7 +334,7 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.set_num_players_from_team(3, None)
         with self.assertRaises(ValueError):
             optimizer.set_num_players_from_team(3, 'MISSING')
-        optimizer.set_min_from_team(4, 'GB')
+        optimizer.set_min_players_from_team(4, 'GB')
         with self.assertRaises(InvalidConstraintException):
             optimizer.set_num_players_from_team(3, 'GB')
         optimizer.clear_constraints()
@@ -344,5 +344,24 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertEqual(sum([1 for p in lineup.players if p.team == 'GB']), 4)
         self.assertEqual(sum([1 for p in lineup.players if p.team == 'DET']), 2)
 
-    def test_qb_wr_stack(self):
-        pass
+    def test_include_qb_receiver_stack(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 288.78)
+        self.assertEqual(lineup.salary, 49100)
+        with self.assertRaises(ValueError):
+            optimizer.set_qb_receiver_stack(team='MISSING')
+        optimizer.set_qb_receiver_stack(team='GB')
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_qb_receiver_stack(team='NE')  # can't add two qb/receiver stacks
+        optimizer.clear_constraints()
+        optimizer.set_max_players_from_team(n=0, team='NE')
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_qb_receiver_stack(team='NE')  # already excluding this team
+        optimizer.clear_constraints()
+        optimizer.set_qb_receiver_stack(team='NE')  # lineup should include a qb/receiver stack from patriots
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(lineup.points, 261.5)
+        self.assertEqual(lineup.salary, 49500)
