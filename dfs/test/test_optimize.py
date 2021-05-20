@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 from dfs import data
@@ -10,6 +11,44 @@ class TestLineupOptimizer(unittest.TestCase):
 
     def setUp(self):
         self.data = data.load_2020_data()
+
+    # the following tests test the optimizer initializer
+
+    def test_initialize_with_wrong_type(self):
+        with self.assertRaises(ValueError):
+            LineupOptimizer(data_source=56)
+        with self.assertRaises(ValueError):
+            LineupOptimizer(data_source=[])
+
+    def test_initialize_with_wrong_file_ext(self):
+        with self.assertRaises(ValueError):
+            LineupOptimizer(data_source='./myFile.txt')
+
+    def test_initialize_with_missing_file(self):
+        with self.assertRaises(ValueError):
+            LineupOptimizer(data_source='./missing_file.csv')
+
+    def test_optimize_with_csv_file(self):
+        temp = tempfile.NamedTemporaryFile(mode='w', suffix='.csv')
+        data.load_2020_data(weeks=[1]).to_csv(temp.name)
+        optimizer = LineupOptimizer(data_source=temp.name,
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(288.78, lineup.points)
+        self.assertEqual(49100, lineup.salary)
+        temp.close()
+
+    def test_optimize_with_excel_file(self):
+        temp = tempfile.NamedTemporaryFile(mode='w', suffix='.xlsx')
+        data.load_2020_data(weeks=[1]).to_excel(temp.name)
+        optimizer = LineupOptimizer(data_source=temp.name,
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(288.78, lineup.points)
+        self.assertEqual(49100, lineup.salary)
+        temp.close()
 
     def test_optimizer_setting_missing_column(self):
         with self.assertRaises(ValueError):
@@ -86,14 +125,6 @@ class TestLineupOptimizer(unittest.TestCase):
 
     def test_draft_kings_optimizer_missing_positions(self):
         optimizer = LineupOptimizer(self.data[self.data['position'] != 'QB'],
-                                    points_col='dk_points',
-                                    salary_col='dk_salary')
-        self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup(site=Site.DRAFTKINGS))
-
-    def test_draft_kings_optimizer_non_int_index(self):
-        df = self.data.copy()
-        df.index = df.index.map(str)
-        optimizer = LineupOptimizer(df,
                                     points_col='dk_points',
                                     salary_col='dk_salary')
         self.assertRaises(InvalidDataFrameException, lambda: optimizer.optimize_lineup(site=Site.DRAFTKINGS))

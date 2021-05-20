@@ -1,8 +1,6 @@
 from enum import Enum
 from typing import Dict, Tuple
 
-from dfs import positions
-
 
 class Site(Enum):
     """
@@ -12,12 +10,12 @@ class Site(Enum):
         'name': 'DraftKings',
         'salary_cap': 50_000,
         'num_players': 9,
-        'position_constraints': {  # TODO: add flex
-            positions.Position.QB: (1, 1),
-            positions.Position.RB: (2, 3),
-            positions.Position.WR: (3, 4),
-            positions.Position.TE: (1, 2),
-            positions.Position.DST: (1, 1)
+        'position_constraints': {
+            'QB': (1, 1),
+            'RB': (2, 3),
+            'WR': (3, 4),
+            'TE': (1, 2),
+            'DST': (1, 1)
         }
     }
     FANDUEL = {
@@ -25,11 +23,11 @@ class Site(Enum):
         'salary_cap': 60_000,
         'num_players': 9,
         'position_constraints': {
-            positions.Position.QB: (1, 1),
-            positions.Position.RB: (2, 3),
-            positions.Position.WR: (3, 4),
-            positions.Position.TE: (1, 2),
-            positions.Position.DST: (1, 1)
+            'QB': (1, 1),
+            'RB': (2, 3),
+            'WR': (3, 4),
+            'TE': (1, 2),
+            'DST': (1, 1)
         }
     }
 
@@ -57,7 +55,7 @@ class Site(Enum):
         """
         return self.value['num_players']
 
-    def position_constraints(self) -> Dict[positions.Position, Tuple[int, int]]:
+    def position_constraints(self) -> Dict[str, Tuple[int, int]]:
         """
         Returns the constraints (min/max) by position. This is represented by a dict mapping position to tuple.
 

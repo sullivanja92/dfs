@@ -13,9 +13,11 @@ def file_exists(file: str) -> bool:
 
 def get_extension(file_path: str) -> str:
     """
-    Returns the extension of a file at a specified path.
+    Returns the lowercase extension of a file at a specified path.
 
     :param file_path: the path to the file
-    :return: the file extension
+    :return: the lowercase file extension
     """
-    return os.path.splitext(file_path)[1].lower()
+    if file_path is None or file_path == '':
+        raise ValueError('File path cannot be none or empty')
+    return os.path.splitext(file_path)[1].replace('.', '').lower()

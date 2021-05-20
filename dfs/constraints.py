@@ -4,21 +4,11 @@ from typing import List, Tuple, Optional
 import pandas as pd
 from pulp import lpSum, LpAffineExpression
 
-from dfs import positions
-
 
 class LineupConstraint(ABC):
     """
     Abstract base class representing a fantasy lineup constraint.
     """
-
-    def __init__(self, lp_var_col: str):
-        """
-        Constructor
-
-        :param lp_var_col: the name of the lp variable column
-        """
-        self._lp_var_col = lp_var_col
 
     @abstractmethod
     def apply(self, data: pd.DataFrame) -> List[LpAffineExpression]:
@@ -45,14 +35,13 @@ class LineupSizeConstraint(LineupConstraint):
     A constraint based on the number of players allowed in a lineup.
     """
 
-    def __init__(self, size: int, lp_var_col: str):
+    def __init__(self, size: int):
         """
         Constructor
 
         :param size: The size of the lineup
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.size = size
 
     def apply(self, data: pd.DataFrame) -> List[LpAffineExpression]:
@@ -61,7 +50,7 @@ class LineupSizeConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[self._lp_var_col]) == self.size]
+        return [lpSum(data['LpVariable']) == self.size]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -79,15 +68,14 @@ class MaxSalaryCapConstraint(LineupConstraint):
     A constraint to specify an upper bound on an optimized lineup's total salary.
     """
 
-    def __init__(self, salary: int, salary_col: str, lp_var_col: str):
+    def __init__(self, salary: int, salary_col: str):
         """
         Constructor
 
         :param salary: The max salary.
         :param salary_col: The name of the data frame's salary column.
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.salary = salary
         self.salary_col = salary_col
 
@@ -97,7 +85,7 @@ class MaxSalaryCapConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[self.salary_col] * data[self._lp_var_col]) <= self.salary]
+        return [lpSum(data[self.salary_col] * data['LpVariable']) <= self.salary]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -119,15 +107,14 @@ class MinSalaryCapConstraint(LineupConstraint):
     A constraint to specify a lower bound on an optimized lineup's total salary.
     """
 
-    def __init__(self, salary: int, salary_col: str, lp_var_col: str):
+    def __init__(self, salary: int, salary_col: str):
         """
         Constructor
 
         :param salary: The min salary.
         :param salary_col: The name of the data frame's salary column.
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.salary = salary
         self.salary_col = salary_col
 
@@ -137,7 +124,7 @@ class MinSalaryCapConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[self.salary_col] * data[self._lp_var_col]) >= self.salary]
+        return [lpSum(data[self.salary_col] * data['LpVariable']) >= self.salary]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -159,15 +146,14 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):
     A constraint used to only consider players for a list of teams.
     """
 
-    def __init__(self, teams: List[str], team_column: str, lp_var_col: str):
+    def __init__(self, teams: List[str], team_column: str):
         """
         Constructor
 
         :param teams: The list of teams to consider.
         :param team_column: The data frame's team column label.
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.teams = teams
         self.team_column = team_column
 
@@ -177,7 +163,7 @@ class OnlyIncludeTeamsConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[~data[self.team_column].isin(self.teams)][self._lp_var_col]) == 0]
+        return [lpSum(data[~data[self.team_column].isin(self.teams)]['LpVariable']) == 0]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -203,15 +189,14 @@ class IncludePlayerConstraint(LineupConstraint):
     A constraint used to specify that an optimized lineup must contain a specified player.
     """
 
-    def __init__(self, player: str, name_col: str, lp_var_col: str):
+    def __init__(self, player: str, name_col: str):
         """
         Constructor
 
         :param player: the player's name or id
         :param name_col: the name or id column
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.player = player
         self.name_col = name_col
 
@@ -221,7 +206,7 @@ class IncludePlayerConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[data[self.name_col] == self.player][self._lp_var_col]) >= 1]
+        return [lpSum(data[data[self.name_col] == self.player]['LpVariable']) >= 1]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -243,15 +228,14 @@ class ExcludePlayerConstraint(LineupConstraint):
     A constraint used to specify that a certain player must be excluded from an optimized lineup.
     """
 
-    def __init__(self, player: str, name_col: str, lp_var_col: str):
+    def __init__(self, player: str, name_col: str):
         """
         Constructor
 
         :param player: the player name or id
         :param name_col: the name or id column
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.player = player
         self.name_col = name_col
 
@@ -261,7 +245,7 @@ class ExcludePlayerConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[data[self.name_col] == self.player][self._lp_var_col]) == 0]
+        return [lpSum(data[data[self.name_col] == self.player]['LpVariable']) == 0]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -283,16 +267,15 @@ class MaxPlayersFromTeamConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup may contain a maximum number of players from a given team.
     """
 
-    def __init__(self, maximum: int, team: str, team_col: str, lp_var_col: str):
+    def __init__(self, maximum: int, team: str, team_col: str):
         """
         Constructor
 
         :param maximum: the maximum number of players
         :param team: the name of the team
         :param team_col: the name of the team column
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.maximum = maximum
         self.team = team
         self.team_col = team_col
@@ -303,7 +286,7 @@ class MaxPlayersFromTeamConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[data[self.team_col] == self.team][self._lp_var_col]) <= self.maximum]
+        return [lpSum(data[data[self.team_col] == self.team]['LpVariable']) <= self.maximum]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -329,16 +312,15 @@ class MinPlayersFromTeamConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup must contain a minimum number of players from a given team.
     """
 
-    def __init__(self, minimum: int, team: str, team_col: str, lp_var_col: str):
+    def __init__(self, minimum: int, team: str, team_col: str):
         """
         Constructor
 
         :param minimum: the minimum number of players from the team that must be included
         :param team: the name of the team
         :param team_col: the data frame's team column name
-        :param lp_var_col: the name of the lp variable column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.minimum = minimum
         self.team = team
         self.team_col = team_col
@@ -349,7 +331,7 @@ class MinPlayersFromTeamConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[data[self.team_col] == self.team][self._lp_var_col]) >= self.minimum]
+        return [lpSum(data[data[self.team_col] == self.team]['LpVariable']) >= self.minimum]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
@@ -375,16 +357,15 @@ class QbReceiverStackConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup must contain a QB/receiver stack from a given team.
     """
 
-    def __init__(self, lp_var_col: str, position_col: str, team: str, team_col: str = None):
+    def __init__(self, position_col: str, team: str, team_col: str = None):
         """
         Constructor
 
-        :param lp_var_col: the name of the lp variable column
         :param position_col: the name of the position column
         :param team: the name of the team
         :param team_col: the name of the team column
         """
-        super().__init__(lp_var_col)
+        super().__init__()
         self.position_col = position_col
         self.team = team
         self.team_col = team_col
@@ -395,8 +376,8 @@ class QbReceiverStackConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == positions.Position.QB)][self._lp_var_col]) >= 1,
-                lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col].isin([positions.Position.WR, positions.Position.TE]))][self._lp_var_col]) >= 1]
+        return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == 'QB')]['LpVariable']) >= 1,
+                lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col].isin(['WR', 'TE']))]['LpVariable']) >= 1]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """

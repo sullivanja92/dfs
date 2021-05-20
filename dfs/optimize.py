@@ -10,7 +10,6 @@ from dfs import file_utils
 from dfs import positions, data_frame_utils, pulp_utils
 from dfs import sites
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
-from dfs.schedule import ScheduleType
 
 
 class OptimizedLineup:
@@ -18,19 +17,34 @@ class OptimizedLineup:
     A class that represents an optimized fantasy football lineup for a given site.
     """
 
-    def __init__(self, problem: LpProblem, data: pd.DataFrame, site: str):
+    def __init__(self, optimizer: 'LineupOptimizer', site: str):
         """
-        :param problem: The LP Problem.
-        :param data: The player data frame.
+        :param optimizer: The optimizer used to generate this lineup.
         :param site: The fantasy site that the lineup has been generated for.
         """
         self.site = site
-        self.index = [pulp_utils.int_index_from_lp_variable_name(p.name)
-                      for p in filter(lambda x: x.varValue == 1, problem.variables())]
-        players = data.loc[self.index]
-        self.points = round(players['points'].sum(), 2)
-        self.salary = players['salary'].sum()
-        self.players = [LineupPlayer(p) for p in players.to_dict('records')]
+        players = optimizer.data[optimizer.data.apply(lambda x: x['LpVariable'].varValue == 1, axis=1)]
+        self.points = round(players[optimizer.points_col].sum(), 2)
+        self.salary = players[optimizer.salary_col].sum()
+        col_mapping = {
+            optimizer.id_col: 'id',
+            optimizer.name_col: 'name',
+            optimizer.position_col: 'position',
+            optimizer.team_col: 'team',
+            optimizer.points_col: 'points',
+            optimizer.salary_col: 'salary'
+        }
+        players_dict = players.to_dict('records')
+        for p in players_dict:
+            for k, v in col_mapping.items():
+                p[v] = p.pop(k)
+            keys_to_delete = []
+            for k in p.keys():
+                if k not in col_mapping.values():
+                    keys_to_delete.append(k)
+            for k in keys_to_delete:
+                del p[k]
+        self.players = [LineupPlayer(p) for p in players_dict]
 
     def write_to_file(self, file_path: str) -> None:
         """
@@ -43,7 +57,7 @@ class OptimizedLineup:
         if file_path is None:
             raise ValueError('File path cannot be none')
         extension = file_utils.get_extension(file_path)
-        if extension != '.csv':
+        if extension != 'csv':
             raise ValueError(f"Only CSV output is supported, found: {extension}")
         file_exists = file_utils.file_exists(file_path)
         with open(file_path, mode='a') as f:
@@ -53,8 +67,7 @@ class OptimizedLineup:
             writer.writerows(self.players)
 
     def __repr__(self):
-        return (f"pygskin.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, "
-                f"players={self.players}, index={self.index})")
+        return f"dfs.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, players={self.players})"
 
     def __str__(self):
         players_string = '\n'.join([f"{p['position'].value} - {p['name']} {p['points']} @ {p['salary']} salary"
@@ -63,7 +76,7 @@ class OptimizedLineup:
                 f"{self.points} points @ {self.salary} salary \n") + players_string
 
 
-class LineupPlayer(Mapping):
+class LineupPlayer(Mapping):  # TODO: improve this class
     """
     A model of a player included in an optimized lineup.
     """
@@ -82,12 +95,8 @@ class LineupPlayer(Mapping):
         :param player_dict: the player dict from dataframe
         """
         self.name = player_dict['name']
-        self.year = player_dict['year']
-        self.week = player_dict['week']
         self.position = player_dict['position']
         self.team = player_dict['team']
-        self.opponent = player_dict['opponent']
-        self.datetime = player_dict['datetime']
         self.points = player_dict['points']
         self.salary = player_dict['salary']
 
@@ -102,35 +111,38 @@ class LineupOptimizer:
     a data frame containing player, position, salary and points information.
     """
 
-    _LP_VAR_COL = 'LpVariable'
-
     def __init__(self,
-                 data: pd.DataFrame,
+                 data_source: Union[pd.DataFrame, str],
                  id_col: str = 'id',
                  name_col: str = 'name',
                  points_col: str = 'points',
                  position_col: str = 'position',
                  salary_col: str = 'salary',
-                 team_col: str = 'team',
-                 datetime_col: str = 'datetime',
-                 year_col: str = 'year',
-                 week_col: str = 'week',
-                 opponent_col: str = 'opponent'):
+                 team_col: str = 'team'):
         """
-        :param data: The pandas data frame containing fantasy data.
+        :param data_source: A dataframe or file path containing fantasy data.
         :param id_col: The player ID column. Default is 'id'.
         :param name_col: The player name column. Default is 'name'.
         :param points_col: The fantasy points column. Default is 'points'.
         :param position_col: The player position column. Default is 'position'.
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
-        :param datetime_col: The game datetime column. Default is 'datetime'.
-        :param year_col: The dataframe year column. Default is 'year'.
-        :param week_col: The dataframe week column. Default is 'week'.
-        :param opponent_col: The dataframe opponent column. Default is 'opponent'.
         """
-        self._data = data
-        if not all(c in data.columns for c in [name_col, points_col, position_col, salary_col, team_col]):
+        if type(data_source) is pd.DataFrame:
+            self._data = data_source.copy()  # don't impact original dataframe
+        elif type(data_source) is str:
+            if not file_utils.file_exists(file=data_source):
+                raise ValueError('The data source file does not exist!')
+            extension = file_utils.get_extension(file_path=data_source)
+            if extension == 'csv':
+                self._data = pd.read_csv(filepath_or_buffer=data_source)
+            elif extension == 'xlsx':
+                self._data = pd.read_excel(io=data_source)
+            else:
+                raise ValueError('Invalid data source file path! csv and xlsx are supported.')
+        else:
+            raise ValueError('Invalid data source type!')
+        if not all(c in self._data.columns for c in [id_col, name_col, points_col, position_col, salary_col, team_col]):
             raise ValueError('DataFrame does not contain necessary columns')
         self._id_col = id_col
         self._name_col = name_col
@@ -138,11 +150,9 @@ class LineupOptimizer:
         self._position_col = position_col
         self._salary_col = salary_col
         self._team_col = team_col
-        self._datetime_col = datetime_col
-        self._year_col = year_col
-        self._week_col = week_col
-        self._opponent_col = opponent_col
         self._constraints = []
+        self._data[self._position_col] = self._data[self._position_col].apply(lambda x: positions.normalize_position(x))
+        self._data.dropna(subset=[self._points_col, self._salary_col], inplace=True)  # TODO: include more columns?
 
     @property
     def data(self):
@@ -172,22 +182,6 @@ class LineupOptimizer:
     def team_col(self):
         return self._team_col
 
-    @property
-    def datetime_col(self):
-        return self._datetime_col
-
-    @property
-    def year_col(self):
-        return self._year_col
-
-    @property
-    def week_col(self):
-        return self._week_col
-
-    @property
-    def opponent_col(self):
-        return self._opponent_col
-
     def set_only_include_teams(self, teams: List[str]) -> None:
         """
         Sets the teams that are to be considered for the lineup optimization.
@@ -199,8 +193,7 @@ class LineupOptimizer:
         if teams is None or len(teams) == 0:
             raise ValueError('Included teams must not be none or empty')
         self._add_constraint(constraints.OnlyIncludeTeamsConstraint(teams=teams,
-                                                                    team_column=self._team_col,
-                                                                    lp_var_col=self._LP_VAR_COL))
+                                                                    team_column=self._team_col))
 
     def set_exclude_teams(self, teams: List[str]) -> None:
         """
@@ -225,7 +218,7 @@ class LineupOptimizer:
         """
         self.set_min_players_from_team(n=1, team=team)
 
-    def set_must_include_player(self, **kwargs) -> None:  # TODO: refactor following two methods for explicit id or name
+    def set_must_include_player(self, **kwargs) -> None:
         """
         Specifies that a lineup must include a player identified by either name or id.
         Either name or id must be provided in kwargs.
@@ -239,8 +232,7 @@ class LineupOptimizer:
         if key is None or key not in self._data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
         self._add_constraint(constraints.IncludePlayerConstraint(player=key,
-                                                                 name_col=col,
-                                                                 lp_var_col=self._LP_VAR_COL))
+                                                                 name_col=col))
 
     def set_exclude_player(self, **kwargs) -> None:
         """
@@ -255,8 +247,7 @@ class LineupOptimizer:
         if key is None or key not in self._data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
         self._add_constraint(constraints.ExcludePlayerConstraint(player=key,
-                                                                 name_col=col,
-                                                                 lp_var_col=self._LP_VAR_COL))
+                                                                 name_col=col))
 
     def set_num_players_from_team(self, n: int, team: str):
         """
@@ -273,13 +264,11 @@ class LineupOptimizer:
             raise ValueError('Invalid team name')
         self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum=n,
                                                                       team=team,
-                                                                      team_col=self._team_col,
-                                                                      lp_var_col=self._LP_VAR_COL))
+                                                                      team_col=self._team_col))
         try:
             self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum=n,
                                                                           team=team,
-                                                                          team_col=self._team_col,
-                                                                          lp_var_col=self._LP_VAR_COL))
+                                                                          team_col=self._team_col))
         except InvalidConstraintException:
             self._constraints.pop()  # remove max players constraint if this one fails
             raise
@@ -299,8 +288,7 @@ class LineupOptimizer:
             raise ValueError('Invalid team name')
         self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum=n,
                                                                       team=team,
-                                                                      team_col=self._team_col,
-                                                                      lp_var_col=self._LP_VAR_COL))
+                                                                      team_col=self._team_col))
 
     def set_min_players_from_team(self, n: int, team: str) -> None:
         """
@@ -319,8 +307,7 @@ class LineupOptimizer:
             return
         self._add_constraint(constraints.MinPlayersFromTeamConstraint(minimum=n,
                                                                       team=team,
-                                                                      team_col=self._team_col,
-                                                                      lp_var_col=self._LP_VAR_COL))
+                                                                      team_col=self._team_col))
 
     def set_max_salary(self, n: int) -> None:
         """
@@ -333,8 +320,7 @@ class LineupOptimizer:
         if n is None or n <= 0:
             raise ValueError('Invalid maximum')
         self._add_constraint(constraints.MaxSalaryCapConstraint(salary=n,
-                                                                salary_col=self._salary_col,
-                                                                lp_var_col=self._LP_VAR_COL))
+                                                                salary_col=self._salary_col))
 
     def set_min_salary(self, n: int) -> None:
         """
@@ -347,8 +333,7 @@ class LineupOptimizer:
         if n is None or all([n > s.salary_cap() for s in list(sites.Site)]):
             raise ValueError('Invalid minimum')
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
-                                                                salary_col=self._salary_col,
-                                                                lp_var_col=self._LP_VAR_COL))
+                                                                salary_col=self._salary_col))
 
     def set_qb_receiver_stack(self, team: str) -> None:
         """
@@ -360,8 +345,7 @@ class LineupOptimizer:
         """
         if team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
-        self._add_constraint(constraints.QbReceiverStackConstraint(lp_var_col=self._LP_VAR_COL,
-                                                                   position_col=self._position_col,
+        self._add_constraint(constraints.QbReceiverStackConstraint(position_col=self._position_col,
                                                                    team=team,
                                                                    team_col=self._team_col))
 
@@ -390,13 +374,12 @@ class LineupOptimizer:
         """
         self._constraints = []
 
-    def optimize_lineup(self, site: Union[sites.Site, str], schedule_type: ScheduleType = None) -> OptimizedLineup:
+    def optimize_lineup(self, site: Union[sites.Site, str]) -> OptimizedLineup:
         """
         Generates and returns an optimized lineup for a given fantasy football site.
         The lineup is generated using the class's data variable and is optimized under provided constraints.
 
         :param site: The fantasy site to generate a lineup for. Can be of type Site or str (full or abbreviation).
-        :param schedule_type: The schedule type to optimize lineup for. Default is ALL.
         :return: The optimized lineup.
         :raises: ValueError, InvalidDataFrameException
         """
@@ -406,43 +389,22 @@ class LineupOptimizer:
             site = sites.Site.FANDUEL
         else:
             raise ValueError('The provided fantasy site is invalid')
-        df = self._data.copy()
-        if not df.index.dtype == 'int64':
-            raise InvalidDataFrameException(('Only int64-type indices are currently supported. '
-                                             'Consider calling reset_index() on data frame'))
-        if not data_frame_utils.contains_all_columns(df, [self._points_col, self.position_col, self.salary_col]):
-            raise InvalidDataFrameException(('The data frame is missing a required column. '
-                                             'Please add this or update column names'))
-        df[self.position_col] = df[self.position_col].apply(lambda x: positions.normalize_position(x))
         position_constraints = site.position_constraints()
-        if not data_frame_utils.col_contains_all_values(df, self.position_col, position_constraints.keys()):
-            raise InvalidDataFrameException('Data frame is missing required positions. '
-                                            f"Required: {position_constraints.keys()}")
-        df.dropna(subset=[self._points_col, self.salary_col], inplace=True)  # TODO: include more columns?
-        if schedule_type is not None:
-            df = df[df[self.datetime_col].apply(lambda x: schedule_type.matches(x))]  # filter data based on schedule
-        df[self._LP_VAR_COL] = df.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}", cat='Binary'), axis=1)
+        if not data_frame_utils.col_contains_all_values(self._data, self.position_col, position_constraints.keys()):
+            raise InvalidDataFrameException('Data frame is missing required positions')
+        self._data['LpVariable'] = self._data.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}", cat='Binary'), axis=1)
         problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
         for k, v in position_constraints.items():
-            players = df[df[self._position_col] == k]
-            problem += lpSum(players[self._LP_VAR_COL]) >= v[0]
-            problem += lpSum(players[self._LP_VAR_COL]) <= v[1]
-        problem += lpSum(df[self._points_col] * df[self._LP_VAR_COL])
-        problem += constraints.LineupSizeConstraint(site.num_players(), self._LP_VAR_COL).apply(df)[0]
-        problem += constraints.MaxSalaryCapConstraint(site.salary_cap(), self._salary_col, self._LP_VAR_COL).apply(df)[0]
+            players = self._data[self._data[self._position_col] == k]
+            problem += lpSum(players['LpVariable']) >= v[0]
+            problem += lpSum(players['LpVariable']) <= v[1]
+        problem += lpSum(self._data[self._points_col] * self._data['LpVariable'])
+        problem += constraints.LineupSizeConstraint(site.num_players()).apply(self._data)[0]
+        problem += constraints.MaxSalaryCapConstraint(site.salary_cap(), self._salary_col).apply(self._data)[0]
         for constraint in self._constraints:
-            for c in constraint.apply(df):  # stack-related constraints may return multiple from apply()
+            for c in constraint.apply(self._data):  # stack-related constraints may return multiple from apply()
                 problem += c
         problem.solve(PULP_CBC_CMD(msg=False))
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
-        col_mappings = {self.name_col: 'name',
-                        self._points_col: 'points',
-                        self.position_col: 'position',
-                        self.salary_col: 'salary',
-                        self.team_col: 'team',
-                        self.datetime_col: 'datetime',
-                        self._year_col: 'year',
-                        self._week_col: 'week',
-                        self._opponent_col: 'opponent'}
-        return OptimizedLineup(problem, data_frame_utils.map_cols_and_filter_by_values(df, col_mappings), site.name())
+        return OptimizedLineup(self, site.name())
