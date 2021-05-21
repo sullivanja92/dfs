@@ -1,6 +1,5 @@
 import csv
-from collections.abc import Mapping
-from typing import AbstractSet, List, Union, Iterator
+from typing import List, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
@@ -61,36 +60,27 @@ class OptimizedLineup:
             raise ValueError(f"Only CSV output is supported, found: {extension}")
         file_exists = file_utils.file_exists(file_path)
         with open(file_path, mode='a') as f:
-            writer = csv.DictWriter(f, fieldnames=self.players[0].keys())
+            writer = csv.DictWriter(f, fieldnames=dir(self.players[0]))
             if not file_exists:
                 writer.writeheader()
-            writer.writerows(self.players)
+            writer.writerows([{k: player.__getattribute__(k) for k in dir(player)} for player in self.players])
 
     def __repr__(self):
         return f"dfs.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, players={self.players})"
 
     def __str__(self):
-        players_string = '\n'.join([f"{p['position'].value} - {p['name']} {p['points']} @ {p['salary']} salary"
-                                    for p in self.players])
+        players_string = '\n'.join([str(p) for p in self.players])
         return (f"Optimized {self.site} Lineup \n"
-                f"{self.points} points @ {self.salary} salary \n") + players_string
+                f"{self.points} points @ {self.salary} salary \n" +
+                players_string)
 
 
-class LineupPlayer(Mapping):  # TODO: improve this class
+class LineupPlayer:
     """
     A model of a player included in an optimized lineup.
     """
 
-    def __len__(self) -> int:
-        return len(vars(self))
-
-    def __iter__(self) -> Iterator[str]:
-        return iter({a: getattr(self, a) for a in vars(self)})
-
-    def keys(self) -> AbstractSet[str]:
-        return vars(self).keys()
-
-    def __init__(self, player_dict):
+    def __init__(self, player_dict: dict):
         """
         :param player_dict: the player dict from dataframe
         """
@@ -100,8 +90,14 @@ class LineupPlayer(Mapping):  # TODO: improve this class
         self.points = player_dict['points']
         self.salary = player_dict['salary']
 
-    def __getitem__(self, item):
-        return getattr(self, item)
+    def __dir__(self):
+        return ['name', 'position', 'team', 'points', 'salary']
+
+    def __repr__(self):
+        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, team={self.team}, points={self.points}, salary={self.salary})"
+
+    def __str__(self):
+        return f"{self.position} {self.name} - {self.team} - {self.points} @ {self.salary}"
 
 
 class LineupOptimizer:
@@ -393,7 +389,7 @@ class LineupOptimizer:
         if not data_frame_utils.col_contains_all_values(self._data, self.position_col, position_constraints.keys()):
             raise InvalidDataFrameException('Data frame is missing required positions')
         self._data['LpVariable'] = self._data.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}", cat='Binary'), axis=1)
-        problem = LpProblem(f"{site.name()} Lineup Optimization", LpMaximize)
+        problem = LpProblem(f"{site.name()}LineupOptimization", LpMaximize)
         for k, v in position_constraints.items():
             players = self._data[self._data[self._position_col] == k]
             problem += lpSum(players['LpVariable']) >= v[0]

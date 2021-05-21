@@ -145,7 +145,7 @@ class TestLineupOptimizer(unittest.TestCase):
         optimizer.clear_constraints()
         optimizer.set_only_include_teams(teams)
         lineup = optimizer.optimize_lineup(site='dk')
-        self.assertTrue(all([x['team'] in teams for x in lineup.players]))
+        self.assertTrue(all([x.team in teams for x in lineup.players]))
 
     def test_exclude_teams_constraint(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
@@ -158,7 +158,7 @@ class TestLineupOptimizer(unittest.TestCase):
         teams = ['GB', 'SEA']
         optimizer.set_exclude_teams(teams)  # should exclude Davante Adams and Russell Wilson
         lineup = optimizer.optimize_lineup(site='dk')
-        self.assertTrue(all([x['team'] not in teams for x in lineup.players]))
+        self.assertTrue(all([x.team not in teams for x in lineup.players]))
 
     def test_clear_constraints(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
@@ -167,10 +167,10 @@ class TestLineupOptimizer(unittest.TestCase):
         teams = ['GB', 'SEA']
         optimizer.set_exclude_teams(teams)  # should exclude Davante Adams and Russell Wilson
         lineup = optimizer.optimize_lineup(site='dk')
-        self.assertTrue(all([x['team'] not in teams for x in lineup.players]))
+        self.assertTrue(all([x.team not in teams for x in lineup.players]))
         optimizer.clear_constraints()
         lineup = optimizer.optimize_lineup(site='dk')
-        self.assertTrue(all([t in [x['team'] for x in lineup.players] for t in teams]))
+        self.assertTrue(all([t in [x.team for x in lineup.players] for t in teams]))
 
     def test_must_include_team_constraint(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
@@ -182,10 +182,10 @@ class TestLineupOptimizer(unittest.TestCase):
             optimizer.set_must_include_team('missing')
         lineup = optimizer.optimize_lineup(site='dk')
         team = 'DET'
-        self.assertTrue(all([p['team'] != team for p in lineup.players]))  # lineup shouldn't include any DET player
+        self.assertTrue(all([p.team != team for p in lineup.players]))  # lineup shouldn't include any DET player
         optimizer.set_must_include_team(team)
         lineup = optimizer.optimize_lineup(site='dk')
-        self.assertTrue(any([p['team'] == team for p in lineup.players]))  # lineup should include DET player
+        self.assertTrue(any([p.team == team for p in lineup.players]))  # lineup should include DET player
 
     def test_include_player_constraint(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
