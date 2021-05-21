@@ -357,18 +357,20 @@ class QbReceiverStackConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup must contain a QB/receiver stack from a given team.
     """
 
-    def __init__(self, position_col: str, team: str, team_col: str = None):
+    def __init__(self, position_col: str, team: str, team_col: str, position: str = None):
         """
         Constructor
 
         :param position_col: the name of the position column
         :param team: the name of the team
         :param team_col: the name of the team column
+        :param position: the receiver position (this is optional)
         """
         super().__init__()
         self.position_col = position_col
         self.team = team
         self.team_col = team_col
+        self.position = position
 
     def apply(self, data: pd.DataFrame) -> List[LpAffineExpression]:
         """
@@ -376,8 +378,12 @@ class QbReceiverStackConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
+        if self.position is not None:
+            positions = [self.position]
+        else:
+            positions = ['WR', 'TE']
         return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == 'QB')]['LpVariable']) >= 1,
-                lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col].isin(['WR', 'TE']))]['LpVariable']) >= 1]
+                lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col].isin(positions))]['LpVariable']) >= 1]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
