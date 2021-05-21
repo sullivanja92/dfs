@@ -421,3 +421,23 @@ class TestLineupOptimizer(unittest.TestCase):
         buf_players = list(filter(lambda p: p.team == 'BUF', lineup.players))
         self.assertTrue(buf_players[0].position == 'QB')
         self.assertTrue(buf_players[1].position == 'TE')
+
+    def test_qb_receiver_stack_num_receivers(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 3],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        self.assertRaises(ValueError, lambda: optimizer.set_qb_receiver_stack(team='DEN', position='TE', num_receivers=3))
+        optimizer.set_qb_receiver_stack(team='DEN')
+        lineup = optimizer.optimize_lineup(site='dk')
+        den_players = list(filter(lambda p: p.team == 'DEN', lineup.players))
+        self.assertTrue(len(den_players) == 2)
+        self.assertTrue(den_players[0].position == 'QB')
+        self.assertTrue(den_players[1].position == 'TE')
+        optimizer.clear_constraints()
+        optimizer.set_qb_receiver_stack(team='DEN', num_receivers=2)
+        lineup = optimizer.optimize_lineup(site='dk')
+        den_players = list(filter(lambda p: p.team == 'DEN', lineup.players))
+        self.assertTrue(len(den_players) == 3)
+        self.assertTrue(den_players[0].position == 'QB')
+        self.assertTrue(den_players[1].position == 'WR')
+        self.assertTrue(den_players[2].position == 'TE')

@@ -331,25 +331,33 @@ class LineupOptimizer:
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
 
-    def set_qb_receiver_stack(self, team: str, position: str = None) -> None:
+    def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:
         """
         Specifies that an optimized lineup should include a QB/receiver stack from a given team.
+        The method allows specifying either the receiver position or the number of receivers to include, but not both.
 
         :param team: the team name
-        :param position: the position - WR or TE - to include. This is optional
+        :param position: the position - WR or TE - to include. This is optional.
+        :param num_receivers: the number of receivers to include in the stack.
         :return: None
         :raises: ValueError if team name is invalid
         """
         if team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
+        if position is not None and num_receivers is not None:
+            raise ValueError('Both of "position" and "num_receivers" cannot be provided')
         if position is not None and position not in ['WR', 'TE']:
             raise ValueError(f"The provided position - {position} - is not valid")
-        self._add_constraint(constraints.QbReceiverStackConstraint(position_col=self._position_col,
-                                                                   team=team,
+        # max_receivers = None  # TODO: implement this when refactoring to optimizers for specific sites
+        # if num_receivers > max_receivers:
+        #     pass
+        self._add_constraint(constraints.QbReceiverStackConstraint(team=team,
+                                                                   position=position,
+                                                                   num_receivers=num_receivers,
                                                                    team_col=self._team_col,
-                                                                   position=position))
+                                                                   position_col=self._position_col))
 
-    def set_rb_def_stack(self, team=None) -> None:
+    def set_rb_def_stack(self, team=None) -> None:  # TODO
         raise NotImplementedError()
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
