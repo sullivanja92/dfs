@@ -148,7 +148,7 @@ class LineupOptimizer:
         self._team_col = team_col
         self._constraints = []
         self._data[self._position_col] = self._data[self._position_col].apply(lambda x: positions.normalize_position(x))
-        self._data.dropna(subset=[self._points_col, self._salary_col], inplace=True)  # TODO: include more columns?
+        self._data.dropna(inplace=True)
 
     @property
     def data(self):
