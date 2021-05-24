@@ -331,6 +331,7 @@ class LineupOptimizer:
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
 
+    # TODO: make specified team optional
     def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:
         """
         Specifies that an optimized lineup should include a QB/receiver stack from a given team.
@@ -357,8 +358,20 @@ class LineupOptimizer:
                                                                    team_col=self._team_col,
                                                                    position_col=self._position_col))
 
-    def set_rb_def_stack(self, team=None) -> None:  # TODO
-        raise NotImplementedError()
+    # TODO: make specified team optional
+    def set_rb_dst_stack(self, team: str) -> None:
+        """
+        Specifies that an optimized lineup should include a RB/DST stack from a given team.
+
+        :param team: the team name
+        :return: None
+        :raises: ValueError if team name is invalid
+        """
+        if team is None or team not in self._data[self._team_col].unique():
+            raise ValueError('Invalid team name')
+        self._add_constraint(constraints.RbDstStackConstraint(team=team,
+                                                              team_col=self._team_col,
+                                                              position_col=self.position_col))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """
@@ -400,7 +413,8 @@ class LineupOptimizer:
         position_constraints = site.position_constraints()
         if not data_frame_utils.col_contains_all_values(self._data, self.position_col, position_constraints.keys()):
             raise InvalidDataFrameException('Data frame is missing required positions')
-        self._data['LpVariable'] = self._data.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}", cat='Binary'), axis=1)
+        self._data['LpVariable'] = self._data.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}",
+                                                                         cat='Binary'), axis=1)
         problem = LpProblem(f"{site.name()}LineupOptimization", LpMaximize)
         for k, v in position_constraints.items():
             players = self._data[self._data[self._position_col] == k]

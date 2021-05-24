@@ -6,6 +6,8 @@ from dfs.exceptions import InvalidDataFrameException, InvalidConstraintException
 from dfs.optimize import LineupOptimizer
 from dfs.sites import Site
 
+# TODO: refactor test cases to isolate what is being tested
+
 
 class TestLineupOptimizer(unittest.TestCase):
 
@@ -441,3 +443,17 @@ class TestLineupOptimizer(unittest.TestCase):
         self.assertTrue(den_players[0].position == 'QB')
         self.assertTrue(den_players[1].position == 'WR')
         self.assertTrue(den_players[2].position == 'TE')
+
+    def test_rb_dst_stack(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        self.assertRaises(ValueError, lambda: optimizer.set_rb_dst_stack(team=None))
+        self.assertRaises(ValueError, lambda: optimizer.set_rb_dst_stack(team='MISSING'))
+        optimizer.set_rb_dst_stack(team='BAL')
+        self.assertRaises(InvalidConstraintException, lambda: optimizer.set_rb_dst_stack(team='CLE'))
+        optimizer.clear_constraints()
+        optimizer.set_rb_dst_stack(team='CLE')
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(1, len(list(filter(lambda p: p.team == 'CLE' and p.position == 'RB', lineup.players))))
+        self.assertEqual(1, len(list(filter(lambda p: p.team == 'CLE' and p.position == 'DST', lineup.players))))
