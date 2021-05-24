@@ -192,7 +192,8 @@ class TestLineupOptimizer(unittest.TestCase):
     def test_include_player_constraint(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
                                     points_col='dk_points',
-                                    salary_col='dk_salary')
+                                    salary_col='dk_salary',
+                                    id_col='id')
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 316.98)
         self.assertEqual(lineup.salary, 49700)
@@ -221,7 +222,8 @@ class TestLineupOptimizer(unittest.TestCase):
     def test_exclude_player_constraint(self):
         optimizer = LineupOptimizer(self.data[self.data['week'] == 4],
                                     points_col='dk_points',
-                                    salary_col='dk_salary')
+                                    salary_col='dk_salary',
+                                    id_col='id')
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(lineup.points, 316.98)
         self.assertEqual(lineup.salary, 49700)
@@ -457,3 +459,13 @@ class TestLineupOptimizer(unittest.TestCase):
         lineup = optimizer.optimize_lineup(site='dk')
         self.assertEqual(1, len(list(filter(lambda p: p.team == 'CLE' and p.position == 'RB', lineup.players))))
         self.assertEqual(1, len(list(filter(lambda p: p.team == 'CLE' and p.position == 'DST', lineup.players))))
+
+    def test_optimizer_without_id_col(self):
+        optimizer = LineupOptimizer(self.data[self.data['week'] == 1],
+                                    points_col='dk_points',
+                                    salary_col='dk_salary')
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id='1'))
+        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id='1'))
+        lineup = optimizer.optimize_lineup(site='dk')
+        self.assertEqual(288.78, lineup.points)
+        self.assertEqual(49100, lineup.salary)

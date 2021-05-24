@@ -36,7 +36,8 @@ class OptimizedLineup:
         players_dict = players.to_dict('records')
         for p in players_dict:
             for k, v in col_mapping.items():
-                p[v] = p.pop(k)
+                if k is not None:  # id_col may be None
+                    p[v] = p.pop(k)
             keys_to_delete = []
             for k in p.keys():
                 if k not in col_mapping.values():
@@ -109,20 +110,20 @@ class LineupOptimizer:
 
     def __init__(self,
                  data_source: Union[pd.DataFrame, str],
-                 id_col: str = 'id',
                  name_col: str = 'name',
                  points_col: str = 'points',
                  position_col: str = 'position',
                  salary_col: str = 'salary',
-                 team_col: str = 'team'):
+                 team_col: str = 'team',
+                 **kwargs):
         """
         :param data_source: A dataframe or file path containing fantasy data.
-        :param id_col: The player ID column. Default is 'id'.
         :param name_col: The player name column. Default is 'name'.
         :param points_col: The fantasy points column. Default is 'points'.
         :param position_col: The player position column. Default is 'position'.
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
+        :param kwargs: Include id_col, if present.
         """
         if type(data_source) is pd.DataFrame:
             self._data = data_source.copy()  # don't impact original dataframe
@@ -138,9 +139,14 @@ class LineupOptimizer:
                 raise ValueError('Invalid data source file path! csv and xlsx are supported.')
         else:
             raise ValueError('Invalid data source type!')
-        if not all(c in self._data.columns for c in [id_col, name_col, points_col, position_col, salary_col, team_col]):
+        if not all(c in self._data.columns for c in [name_col, points_col, position_col, salary_col, team_col]):
             raise ValueError('DataFrame does not contain necessary columns')
-        self._id_col = id_col
+        if 'id_col' in kwargs:
+            if len(self._data[kwargs['id_col']].unique()) != len(self._data):
+                raise InvalidDataFrameException('Provided ID column must be unique for each row')
+            self._id_col = kwargs['id_col']
+        else:
+            self._id_col = None
         self._name_col = name_col
         self._points_col = points_col
         self._position_col = position_col
@@ -224,6 +230,8 @@ class LineupOptimizer:
         """
         if all([it not in kwargs for it in ['id', 'name']]):
             raise ValueError('Must provide id or name')
+        if 'id' in kwargs and self._id_col is None:
+            raise ValueError('ID column not specified')
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
@@ -239,6 +247,8 @@ class LineupOptimizer:
         """
         if all([it not in kwargs for it in ['id', 'name']]):
             raise ValueError('Must provide id or name')
+        if 'id' in kwargs and self._id_col is None:
+            raise ValueError('ID column not specified')
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
         if key is None or key not in self._data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
