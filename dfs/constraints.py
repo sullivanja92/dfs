@@ -4,6 +4,8 @@ from typing import List, Tuple, Optional
 import pandas as pd
 from pulp import lpSum, LpAffineExpression
 
+from dfs.positions import QB, RB, WR, TE, DST
+
 
 class LineupConstraint(ABC):
     """
@@ -380,9 +382,9 @@ class QbReceiverStackConstraint(LineupConstraint):
 
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        positions = [self.position] if self.position is not None else ['WR', 'TE']
+        positions = [self.position] if self.position is not None else [WR, TE]
         n = 1 if self.num_receivers is None else self.num_receivers
-        return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == 'QB')]['LpVariable']) >= 1,
+        return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == QB)]['LpVariable']) >= 1,
                 lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col].isin(positions))]['LpVariable']) >= n]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
@@ -428,8 +430,8 @@ class RbDstStackConstraint(LineupConstraint):
         :param data: the player data frame.
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == 'RB')]['LpVariable']) >= 1,
-                lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == 'DST')]['LpVariable']) == 1]
+        return [lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == RB)]['LpVariable']) >= 1,
+                lpSum(data[(data[self.team_col] == self.team) & (data[self.position_col] == DST)]['LpVariable']) == 1]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """

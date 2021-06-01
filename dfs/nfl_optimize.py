@@ -3,6 +3,7 @@ from typing import Dict, Tuple
 
 from dfs import constraints
 from dfs.optimize import LineupOptimizer
+from dfs.positions import QB, RB, WR, TE, DST
 
 
 class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
@@ -69,11 +70,11 @@ class DraftKingsNflLineupOptimizer(NflLineupOptimizer):
 
     def position_constraints(self) -> Dict[str, Tuple[int, int]]:
         return {
-            'QB': (1, 1),
-            'RB': (2, 3),
-            'WR': (3, 4),
-            'TE': (1, 2),
-            'DST': (1, 1)
+            QB: (1, 1),
+            RB: (2, 3),
+            WR: (3, 4),
+            TE: (1, 2),
+            DST: (1, 1)
         }
 
 
@@ -93,9 +94,9 @@ class FanDuelNflLineupOptimizer(NflLineupOptimizer):
 
     def position_constraints(self) -> Dict[str, Tuple[int, int]]:
         return {
-            'QB': (1, 1),
-            'RB': (2, 3),
-            'WR': (3, 4),
-            'TE': (1, 2),
-            'DST': (1, 1)
+            QB: (1, 1),
+            RB: (2, 3),
+            WR: (3, 4),
+            TE: (1, 2),
+            DST: (1, 1)
         }
