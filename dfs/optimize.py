@@ -1,5 +1,6 @@
 import csv
-from typing import List, Union
+from abc import ABC, abstractmethod
+from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
@@ -7,7 +8,6 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 from dfs import constraints
 from dfs import file_utils
 from dfs import positions, data_frame_utils, pulp_utils
-from dfs import sites
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 
 
@@ -101,7 +101,7 @@ class LineupPlayer:
         return f"{self.position} {self.name} - {self.team} - {self.points} @ {self.salary}"
 
 
-class LineupOptimizer:
+class LineupOptimizer(ABC):
     """
     A pandas data frame-based fantasy football lineup optimizer.
     This class is used to generate optimal fantasy football lineups for various sites when provided
@@ -184,6 +184,43 @@ class LineupOptimizer:
     def team_col(self):
         return self._team_col
 
+    @abstractmethod
+    def num_players(self) -> int:
+        """
+        Returns the total number of players that are to be included in an optimized lineup for the given site.
+
+        :return: The total number of players to be included in the lineup.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def salary_cap(self) -> int:
+        """
+        Returns the salary cap - or max available salary - to use for this given site's lineup optimization.
+
+        :return: The site's salary cap.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def site_name(self) -> str:
+        """
+        Returns the name of the fantasy site that this lineup optimizer is being used for. Ex. DraftKings, FanDuel, etc.
+
+        :return: The name of the fantasy site.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def position_constraints(self) -> Dict[str, Tuple[int, int]]:
+        """
+        Returns a dict that maps position to a tuple containing min and max numbers of this position that may be
+        included in the optimized lineup. Ex. { RB : (2, 3) ... }
+
+        :return: A dict mapping position name to min/max count.
+        """
+        raise NotImplementedError
+
     def set_only_include_teams(self, teams: List[str]) -> None:
         """
         Sets the teams that are to be considered for the lineup optimization.
@@ -264,7 +301,7 @@ class LineupOptimizer:
         :return: None
         :raises: ValueError if number of players or team are invalid
         """
-        if n is None or all([n > s.num_players() for s in list(sites.Site)]):
+        if n is None or n > self.num_players():
             raise ValueError('Invalid number of players')
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
@@ -305,7 +342,7 @@ class LineupOptimizer:
         :return: None
         :raises: ValueError if minimum or team are invalid
         """
-        if n is None or all([n > s.num_players() for s in list(sites.Site)]):
+        if n is None or n > self.num_players():
             raise ValueError('Invalid minimum number of players')
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
@@ -336,52 +373,10 @@ class LineupOptimizer:
         :return: None
         :raises: ValueError if minimum is invalid
         """
-        if n is None or all([n > s.salary_cap() for s in list(sites.Site)]):
+        if n is None or n > self.salary_cap():
             raise ValueError('Invalid minimum')
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
-
-    # TODO: make specified team optional
-    def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:
-        """
-        Specifies that an optimized lineup should include a QB/receiver stack from a given team.
-        The method allows specifying either the receiver position or the number of receivers to include, but not both.
-
-        :param team: the team name
-        :param position: the position - WR or TE - to include. This is optional.
-        :param num_receivers: the number of receivers to include in the stack.
-        :return: None
-        :raises: ValueError if team name is invalid
-        """
-        if team not in self._data[self._team_col].unique():
-            raise ValueError('Invalid team name')
-        if position is not None and num_receivers is not None:
-            raise ValueError('Both of "position" and "num_receivers" cannot be provided')
-        if position is not None and position not in ['WR', 'TE']:
-            raise ValueError(f"The provided position - {position} - is not valid")
-        # max_receivers = None  # TODO: implement this when refactoring to optimizers for specific sites
-        # if num_receivers > max_receivers:
-        #     pass
-        self._add_constraint(constraints.QbReceiverStackConstraint(team=team,
-                                                                   position=position,
-                                                                   num_receivers=num_receivers,
-                                                                   team_col=self._team_col,
-                                                                   position_col=self._position_col))
-
-    # TODO: make specified team optional
-    def set_rb_dst_stack(self, team: str) -> None:
-        """
-        Specifies that an optimized lineup should include a RB/DST stack from a given team.
-
-        :param team: the team name
-        :return: None
-        :raises: ValueError if team name is invalid
-        """
-        if team is None or team not in self._data[self._team_col].unique():
-            raise ValueError('Invalid team name')
-        self._add_constraint(constraints.RbDstStackConstraint(team=team,
-                                                              team_col=self._team_col,
-                                                              position_col=self.position_col))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """
@@ -405,38 +400,31 @@ class LineupOptimizer:
         """
         self._constraints = []
 
-    def optimize_lineup(self, site: Union[sites.Site, str]) -> OptimizedLineup:
+    def optimize_lineup(self) -> OptimizedLineup:
         """
         Generates and returns an optimized lineup for a given fantasy football site.
         The lineup is generated using the class's data variable and is optimized under provided constraints.
 
-        :param site: The fantasy site to generate a lineup for. Can be of type Site or str (full or abbreviation).
         :return: The optimized lineup.
         :raises: ValueError, InvalidDataFrameException
         """
-        if (type(site) is str and site.lower() in ('draftkings', 'dk')) or site == sites.Site.DRAFTKINGS:
-            site = sites.Site.DRAFTKINGS
-        elif (type(site) is str and site.lower() in ('fanduel', 'fd')) or site == sites.Site.FANDUEL:
-            site = sites.Site.FANDUEL
-        else:
-            raise ValueError('The provided fantasy site is invalid')
-        position_constraints = site.position_constraints()
+        position_constraints = self.position_constraints()
         if not data_frame_utils.col_contains_all_values(self._data, self.position_col, position_constraints.keys()):
             raise InvalidDataFrameException('Data frame is missing required positions')
         self._data['LpVariable'] = self._data.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}",
                                                                          cat='Binary'), axis=1)
-        problem = LpProblem(f"{site.name()}LineupOptimization", LpMaximize)
+        problem = LpProblem(f"{self.site_name()}LineupOptimization", LpMaximize)
         for k, v in position_constraints.items():
             players = self._data[self._data[self._position_col] == k]
             problem += lpSum(players['LpVariable']) >= v[0]
             problem += lpSum(players['LpVariable']) <= v[1]
         problem += lpSum(self._data[self._points_col] * self._data['LpVariable'])
-        problem += constraints.LineupSizeConstraint(site.num_players()).apply(self._data)[0]
-        problem += constraints.MaxSalaryCapConstraint(site.salary_cap(), self._salary_col).apply(self._data)[0]
+        problem += constraints.LineupSizeConstraint(self.num_players()).apply(self._data)[0]
+        problem += constraints.MaxSalaryCapConstraint(self.salary_cap(), self._salary_col).apply(self._data)[0]
         for constraint in self._constraints:
             for c in constraint.apply(self._data):  # stack-related constraints may return multiple from apply()
                 problem += c
         problem.solve(PULP_CBC_CMD(msg=False))
         if not pulp_utils.is_optimal_solution_found(problem):
             raise UnsolvableLineupException('No optimal solution found under current lineup constraints')
-        return OptimizedLineup(self, site.name())
+        return OptimizedLineup(self, self.site_name())

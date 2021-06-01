@@ -2521,4 +2521,4 @@ def load_2020_data(weeks: List[int] = range(1, 5)) -> pd.DataFrame:  # TODO: cor
                             2900.0, 2800.0, 2600.0, 3500.0, 2100.0, 3200.0, 2900.0, 2700.0, 2000.0, 3000.0, 2500.0,
                             3100.0, 3600.0, 2700.0, 2200.0, 2400.0, 3300.0, 3000.0, 3000.0, 2500.0]})
     df['id'] = range(len(df))
-    return df[df['week'].isin(weeks)]
+    return df[(df['week'].isin(weeks)) & (df['dk_salary'] > 0) & (df['fd_salary'] > 0)]
