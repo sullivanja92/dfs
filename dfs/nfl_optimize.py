@@ -1,7 +1,5 @@
 from abc import ABCMeta
-from typing import Dict, Tuple, Union
-
-import pandas as pd
+from typing import Dict, Tuple
 
 from dfs import constraints
 from dfs.optimize import LineupOptimizer
@@ -110,50 +108,8 @@ class YahooNflLineupOptimizer(NflLineupOptimizer):
     # TODO: implement single game
     """
 
-    _MULTI_GAME_LINEUP_SIZE = 9
-    _MULTI_GAME_CONSTRAINTS = {
-        QB: (1, 1),
-        RB: (2, 3),
-        WR: (3, 4),
-        TE: (1, 2),
-        DST: (1, 1)
-    }
-    _SINGLE_GAME_LINEUP_SIZE = 5
-    _SINGLE_GAME_CONSTRAINTS = {
-        QB: (0, 5),
-        RB: (0, 5),
-        WR: (0, 5),
-        TE: (0, 5),
-        DST: (0, 5)
-    }
-    _SUPERSTAR_MULTIPLIER = 1.5
-
-    def __init__(self,
-                 data_source: Union[pd.DataFrame, str],
-                 name_col: str = 'name',
-                 points_col: str = 'points',
-                 position_col: str = 'position',
-                 salary_col: str = 'salary',
-                 team_col: str = 'team',
-                 **kwargs):
-        """
-
-        :param data_source:
-        :param name_col:
-        :param points_col:
-        :param position_col:
-        :param salary_col:
-        :param team_col:
-        :param kwargs:
-        """
-        super().__init__(data_source, name_col, points_col, position_col, salary_col, team_col, **kwargs)
-        self._is_single_game = False
-
     def num_players(self) -> int:
-        if self._is_single_game:
-            return self._SINGLE_GAME_LINEUP_SIZE
-        else:
-            return self._MULTI_GAME_LINEUP_SIZE
+        return 9
 
     def salary_cap(self) -> int:
         return 200
@@ -162,33 +118,10 @@ class YahooNflLineupOptimizer(NflLineupOptimizer):
         return 'Yahoo'
 
     def position_constraints(self) -> Dict[str, Tuple[int, int]]:
-        if self._is_single_game:
-            return self._SINGLE_GAME_CONSTRAINTS
-        else:
-            return self._MULTI_GAME_CONSTRAINTS
-
-    # def set_single_game_contest(self, t1: str, t2: str) -> None:
-    #     """
-    #
-    #     :param t1:
-    #     :param t2:
-    #     :return:
-    #     """
-    #     if not self._is_single_game:
-    #         if not all(t in self._data[self.team_col].unique() for t in [t1, t2]):
-    #             raise ValueError("Team(s) not found in dataframe's team column")
-    #         self._is_single_game = True
-    #         self._add_constraint(constraints.SingleGameConstraint(t1=t1,
-    #                                                               t2=t2,
-    #                                                               team_col=self.team_col,
-    #                                                               num_players=self._SINGLE_GAME_LINEUP_SIZE))
-    #
-    # def set_multi_game_contest(self) -> None:
-    #     """
-    #
-    #     :return:
-    #     """
-    #     if self._is_single_game:
-    #         self._is_single_game = False
-    #         self._constraints = list(filter(lambda c: type(c) is not constraints.SingleGameConstraint,
-    #                                         self._constraints))
+        return {
+            QB: (1, 1),
+            RB: (2, 3),
+            WR: (3, 4),
+            TE: (1, 2),
+            DST: (1, 1)
+        }
