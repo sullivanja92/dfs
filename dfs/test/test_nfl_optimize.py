@@ -501,7 +501,7 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
                                                  points_col='dk_points',
                                                  salary_col='dk_salary',
                                                  id_col='id')
-        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(name=None))
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(name='MISSING'))
 
     def test_include_player_id(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 4],
@@ -526,7 +526,7 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
                                                  points_col='dk_points',
                                                  salary_col='dk_salary',
                                                  id_col='id')
-        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id='MISSING_ID'))
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id=9999))
 
     def test_exclude_player_name(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 4],
@@ -592,7 +592,7 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
                                                  points_col='dk_points',
                                                  salary_col='dk_salary',
                                                  id_col='id')
-        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id='MISSING_ID'))
+        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id=9999))
 
     def test_max_from_team(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 3],
@@ -928,8 +928,8 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
                                                  points_col='dk_points',
                                                  salary_col='dk_salary')
-        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id='1'))
-        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id='1'))
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id=1))
+        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id=1))
         lineup = optimizer.optimize_lineup()
         self.assertEqual(288.78, lineup.points)
         self.assertEqual(49100, lineup.salary)
@@ -1128,7 +1128,7 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
                                               points_col='fd_points',
                                               salary_col='fd_salary',
                                               id_col='id')
-        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id='MISSING_ID'))
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id=9999))
 
     def test_exclude_player_name(self):
         optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 4],
@@ -1194,7 +1194,7 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
                                               points_col='fd_points',
                                               salary_col='fd_salary',
                                               id_col='id')
-        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id='MISSING_ID'))
+        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id=9999))
 
     def test_max_from_team(self):
         optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 4],
@@ -1529,8 +1529,8 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
                                               points_col='fd_points',
                                               salary_col='fd_salary')
-        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id='1'))
-        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id='1'))
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id=1))
+        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id=1))
         lineup = optimizer.optimize_lineup()
         self.assertEqual(244.68, lineup.points)
         self.assertEqual(59800, lineup.salary)
@@ -2140,8 +2140,8 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
                                             points_col='yh_points',
                                             salary_col='yh_salary')
-        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id='1'))
-        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id='1'))
+        self.assertRaises(ValueError, lambda: optimizer.set_must_include_player(id=1))
+        self.assertRaises(ValueError, lambda: optimizer.set_exclude_player(id=1))
         lineup = optimizer.optimize_lineup()
         self.assertEqual(244.68, lineup.points)
         self.assertEqual(195, lineup.salary)
