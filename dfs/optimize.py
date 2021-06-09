@@ -134,7 +134,7 @@ class LineupOptimizer(ABC):
             if extension == 'csv':
                 self._data = pd.read_csv(filepath_or_buffer=data_source)
             elif extension == 'xlsx':
-                self._data = pd.read_excel(io=data_source)
+                self._data = pd.read_excel(io=data_source, engine='openpyxl')
             else:
                 raise ValueError('Invalid data source file path! csv and xlsx are supported.')
         else:

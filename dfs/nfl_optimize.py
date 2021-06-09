@@ -100,3 +100,28 @@ class FanDuelNflLineupOptimizer(NflLineupOptimizer):
             TE: (1, 2),
             DST: (1, 1)
         }
+
+
+class YahooNflLineupOptimizer(NflLineupOptimizer):
+    """
+    A lineup optimizer for Yahoo salary cap-based NFL lineup optimization.
+    # TODO: implement single game
+    """
+
+    def num_players(self) -> int:
+        return 9
+
+    def salary_cap(self) -> int:
+        return 200
+
+    def site_name(self) -> str:
+        return 'Yahoo'
+
+    def position_constraints(self) -> Dict[str, Tuple[int, int]]:
+        return {
+            QB: (1, 1),
+            RB: (2, 3),
+            WR: (3, 4),
+            TE: (1, 2),
+            DST: (1, 1)
+        }
