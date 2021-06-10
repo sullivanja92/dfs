@@ -1,6 +1,7 @@
 import csv
+import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
@@ -9,6 +10,9 @@ from dfs import constraints
 from dfs import file_utils
 from dfs import positions, data_frame_utils, pulp_utils
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 class OptimizedLineup:
@@ -31,7 +35,8 @@ class OptimizedLineup:
             optimizer.position_col: 'position',
             optimizer.team_col: 'team',
             optimizer.points_col: 'points',
-            optimizer.salary_col: 'salary'
+            optimizer.salary_col: 'salary',
+            optimizer.datetime_col: 'datetime'
         }
         players_dict = players.to_dict('records')
         for p in players_dict:
@@ -90,12 +95,13 @@ class LineupPlayer:
         self.team = player_dict['team']
         self.points = player_dict['points']
         self.salary = player_dict['salary']
+        self.datetime = player_dict['datetime']
 
     def __dir__(self):
-        return ['name', 'position', 'team', 'points', 'salary']
+        return ['name', 'position', 'team', 'points', 'salary', 'datetime']
 
     def __repr__(self):
-        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, team={self.team}, points={self.points}, salary={self.salary})"
+        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, team={self.team}, points={self.points}, salary={self.salary}, datetime={self.datetime})"
 
     def __str__(self):
         return f"{self.position} {self.name} - {self.team} - {self.points} @ {self.salary}"
@@ -115,7 +121,8 @@ class LineupOptimizer(ABC):
                  position_col: str = 'position',
                  salary_col: str = 'salary',
                  team_col: str = 'team',
-                 **kwargs):
+                 datetime_col: str = 'datetime',
+                 id_col: str = None):
         """
         :param data_source: A dataframe or file path containing fantasy data.
         :param name_col: The player name column. Default is 'name'.
@@ -123,7 +130,8 @@ class LineupOptimizer(ABC):
         :param position_col: The player position column. Default is 'position'.
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
-        :param kwargs: Include id_col, if present.
+        :param datetime_col: The datetime column. Default is 'datetime'.
+        :param id_col: Optional ID column name.
         """
         if type(data_source) is pd.DataFrame:
             self._data = data_source.copy()  # don't impact original dataframe
@@ -139,19 +147,18 @@ class LineupOptimizer(ABC):
                 raise ValueError('Invalid data source file path! csv and xlsx are supported.')
         else:
             raise ValueError('Invalid data source type!')
-        if not all(c in self._data.columns for c in [name_col, points_col, position_col, salary_col, team_col]):
-            raise ValueError('DataFrame does not contain necessary columns')
-        if 'id_col' in kwargs:
-            if len(self._data[kwargs['id_col']].unique()) != len(self._data):
+        if not all(c in self._data.columns for c in [name_col, points_col, position_col, salary_col, team_col, datetime_col]):
+            raise InvalidDataFrameException('DataFrame does not contain necessary columns')
+        if id_col is not None:
+            if len(self._data[id_col].unique()) != len(self._data):
                 raise InvalidDataFrameException('Provided ID column must be unique for each row')
-            self._id_col = kwargs['id_col']
-        else:
-            self._id_col = None
         self._name_col = name_col
         self._points_col = points_col
         self._position_col = position_col
         self._salary_col = salary_col
         self._team_col = team_col
+        self._datetime_col = datetime_col
+        self._id_col = id_col
         self._constraints = []
         self._data[self._position_col] = self._data[self._position_col].apply(lambda x: positions.normalize_position(x))
         self._data.dropna(inplace=True)
@@ -183,6 +190,10 @@ class LineupOptimizer(ABC):
     @property
     def team_col(self):
         return self._team_col
+
+    @property
+    def datetime_col(self):
+        return self._datetime_col
 
     @abstractmethod
     def num_players(self) -> int:
@@ -377,6 +388,27 @@ class LineupOptimizer(ABC):
             raise ValueError('Invalid minimum')
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
+
+    def set_game_slate_sunday_early(self) -> None:
+        """
+        Sets the optimizer to include only Sunday early games (13PM EST).
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday Early"')
+        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6 and x[y].hour == 13)
+
+    def _set_game_slate(self, game_selector: Callable) -> None:
+        """
+        Set the game slate to determine which games are to be included in an optimized lineup.
+
+        :param game_selector: The lambda game selector.
+        :return: None
+        """
+        logger.warning(f"Setting game slate with selector {game_selector}")
+        self._add_constraint(constraints.GameSlateConstraint(game_selector=game_selector,
+                                                             datetime_col=self._datetime_col,
+                                                             num_players=self.num_players()))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
         """

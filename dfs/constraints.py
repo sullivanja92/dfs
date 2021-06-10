@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional
+from typing import Callable, List, Tuple, Optional
 
 import pandas as pd
 from pulp import lpSum, LpAffineExpression
@@ -448,4 +448,45 @@ class RbDstStackConstraint(LineupConstraint):
             elif type(constraint) is MaxPlayersFromTeamConstraint:
                 if constraint.team == self.team and constraint.maximum < 2:
                     return False, f"Max players from {self.team} is already set to {constraint.maximum}"
+        return True, None
+
+
+class GameSlateConstraint(LineupConstraint):
+    """
+    A constraint specifying that an optimized lineup should only include players from a specified game slate.
+    """
+
+    def __init__(self, game_selector: Callable, datetime_col: str, num_players: int):
+        """
+        Initializer
+
+        :param game_selector: the name of the team for which to include this stack
+        :param datetime_col: the name of the dataframe's team column
+        :param num_players: the number of players to include in an optimized lineup
+        """
+        super().__init__()
+        self.game_selector = game_selector
+        self.datetime_col = datetime_col
+        self.num_players = num_players
+
+    def apply(self, data: pd.DataFrame) -> List[LpAffineExpression]:
+        """
+        Applies the constraint.
+
+        :param data: the player data frame.
+        :return: An LpAffineExpression to be added to the LpProblem.
+        """
+        return [lpSum(data[data.apply(lambda x: self.game_selector(x, self.datetime_col), axis=1)]['LpVariable']) == self.num_players]
+
+    def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
+        """
+        Returns false if any of the below conditions are satisfied:
+        1. The lineup optimizer already includes a GameSlateConstraint.
+
+        :param constraints: the list of existing lineup constraints
+        :return: a bool indicating whether or not the constraint is valid and a message, if appropriate
+        """
+        for constraint in constraints:
+            if type(constraint) is GameSlateConstraint:
+                return False, 'Optimizer already includes a game slate-related constraint'
         return True, None

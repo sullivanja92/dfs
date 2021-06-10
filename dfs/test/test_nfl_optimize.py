@@ -313,6 +313,18 @@ class TestNflLineupOptimizer(ABC):
     def test_optimizer_without_id_col(self):
         pass
 
+    @abstractmethod
+    def test_game_slate_sunday_early(self):
+        pass
+
+    @abstractmethod
+    def test_missing_datetime_col(self):
+        pass
+
+    @abstractmethod
+    def test_game_slate_already_included(self):
+        pass
+
     @staticmethod
     def change_position(position: str) -> str:
         """
@@ -371,11 +383,11 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         temp.close()
 
     def test_optimizer_setting_missing_column(self):
-        self.assertRaises(ValueError,
+        self.assertRaises(InvalidDataFrameException,
                           lambda: DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1], name_col='missing'))
 
     def test_optimizer_missing_column(self):
-        self.assertRaises(ValueError, lambda: DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1]))
+        self.assertRaises(InvalidDataFrameException, lambda: DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1]))
 
     def test_optimizer_with_different_format_positions(self):
         df = self.data.copy()
@@ -934,6 +946,31 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         self.assertEqual(288.78, lineup.points)
         self.assertEqual(49100, lineup.salary)
 
+    def test_game_slate_sunday_early(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.hour != 13, lineup.players))))
+        optimizer.set_game_slate_sunday_early()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.hour != 13, lineup.players))))
+
+    def test_missing_datetime_col(self):
+        with self.assertRaises(InvalidDataFrameException):
+            DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                         points_col='dk_points',
+                                         salary_col='dk_salary',
+                                         datetime_col='datetime_missing')
+
+    def test_game_slate_already_included(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_game_slate_sunday_early()
+            optimizer.set_game_slate_sunday_early()
+
 
 class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
 
@@ -973,11 +1010,11 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         temp.close()
 
     def test_optimizer_setting_missing_column(self):
-        self.assertRaises(ValueError,
+        self.assertRaises(InvalidDataFrameException,
                           lambda: FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1], name_col='missing'))
 
     def test_optimizer_missing_column(self):
-        self.assertRaises(ValueError, lambda: FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1]))
+        self.assertRaises(InvalidDataFrameException, lambda: FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1]))
 
     def test_optimizer_with_different_format_positions(self):
         df = self.data.copy()
@@ -1535,6 +1572,31 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         self.assertEqual(244.68, lineup.points)
         self.assertEqual(59800, lineup.salary)
 
+    def test_game_slate_sunday_early(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.hour != 13, lineup.players))))
+        optimizer.set_game_slate_sunday_early()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.hour != 13, lineup.players))))
+
+    def test_missing_datetime_col(self):
+        with self.assertRaises(InvalidDataFrameException):
+            FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                      points_col='fd_points',
+                                      salary_col='fd_salary',
+                                      datetime_col='datetime_missing')
+
+    def test_game_slate_already_included(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_game_slate_sunday_early()
+            optimizer.set_game_slate_sunday_early()
+
 
 class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
 
@@ -1574,11 +1636,11 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         temp.close()
 
     def test_optimizer_setting_missing_column(self):
-        self.assertRaises(ValueError,
+        self.assertRaises(InvalidDataFrameException,
                           lambda: YahooNflLineupOptimizer(self.data[self.data['week'] == 1], name_col='missing'))
 
     def test_optimizer_missing_column(self):
-        self.assertRaises(ValueError, lambda: YahooNflLineupOptimizer(self.data[self.data['week'] == 1]))
+        self.assertRaises(InvalidDataFrameException, lambda: YahooNflLineupOptimizer(self.data[self.data['week'] == 1]))
 
     def test_optimizer_with_different_format_positions(self):
         df = self.data.copy()
@@ -2154,4 +2216,27 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         self.assertEqual(244.68, lineup.points)
         self.assertEqual(195, lineup.salary)
 
+    def test_game_slate_sunday_early(self):
+        optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                            points_col='yh_points',
+                                            salary_col='yh_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.hour != 13, lineup.players))))
+        optimizer.set_game_slate_sunday_early()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.hour != 13, lineup.players))))
 
+    def test_missing_datetime_col(self):
+        with self.assertRaises(InvalidDataFrameException):
+            YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                    points_col='yh_points',
+                                    salary_col='yh_salary',
+                                    datetime_col='datetime_missing')
+
+    def test_game_slate_already_included(self):
+        optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                            points_col='yh_points',
+                                            salary_col='yh_salary')
+        with self.assertRaises(InvalidConstraintException):
+            optimizer.set_game_slate_sunday_early()
+            optimizer.set_game_slate_sunday_early()
