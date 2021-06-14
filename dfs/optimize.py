@@ -389,6 +389,15 @@ class LineupOptimizer(ABC):
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
 
+    def set_game_slate_sunday(self) -> None:
+        """
+        Sets the optimizer to include all Sunday games only.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday"')
+        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6)
+
     def set_game_slate_sunday_early(self) -> None:
         """
         Sets the optimizer to include only Sunday early games (13PM EST).
@@ -398,7 +407,7 @@ class LineupOptimizer(ABC):
         logger.info('Setting game slate to "Sunday early"')
         self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6 and x[y].hour == 13)
 
-    def set_game_slate_sunday_early_and_late(self):
+    def set_game_slate_sunday_early_and_late(self) -> None:
         """
         Sets the optimizer to include only Sunday early and late games (13PM and 16PM EST).
 

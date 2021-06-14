@@ -314,6 +314,10 @@ class TestNflLineupOptimizer(ABC):
         pass
 
     @abstractmethod
+    def test_game_slate_sunday(self):
+        pass
+
+    @abstractmethod
     def test_game_slate_sunday_early(self):
         pass
 
@@ -950,6 +954,16 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         self.assertEqual(288.78, lineup.points)
         self.assertEqual(49100, lineup.salary)
 
+    def test_game_slate_sunday(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 6, lineup.players))))
+        optimizer.set_game_slate_sunday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 6, lineup.players))))
+
     def test_game_slate_sunday_early(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
                                                  points_col='dk_points',
@@ -1585,6 +1599,16 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         lineup = optimizer.optimize_lineup()
         self.assertEqual(244.68, lineup.points)
         self.assertEqual(59800, lineup.salary)
+
+    def test_game_slate_sunday(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 6, lineup.players))))
+        optimizer.set_game_slate_sunday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 6, lineup.players))))
 
     def test_game_slate_sunday_early(self):
         optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
@@ -2239,6 +2263,16 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         lineup = optimizer.optimize_lineup()
         self.assertEqual(244.68, lineup.points)
         self.assertEqual(195, lineup.salary)
+
+    def test_game_slate_sunday(self):
+        optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                            points_col='yh_points',
+                                            salary_col='yh_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 6, lineup.players))))
+        optimizer.set_game_slate_sunday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 6, lineup.players))))
 
     def test_game_slate_sunday_early(self):
         optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
