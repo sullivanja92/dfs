@@ -330,6 +330,10 @@ class TestNflLineupOptimizer(ABC):
         pass
 
     @abstractmethod
+    def test_game_slate_sunday_and_monday(self):
+        pass
+
+    @abstractmethod
     def test_game_slate_already_included(self):
         pass
 
@@ -984,6 +988,16 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         lineup = optimizer.optimize_lineup()
         self.assertEqual(0, len(list(filter(lambda p: p.datetime.hour not in [13, 16], lineup.players))))
 
+    def test_game_slate_sunday_and_monday(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 4],
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() not in [0, 6], lineup.players))))
+        optimizer.set_game_slate_sunday_and_monday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() not in [0, 6], lineup.players))))
+
     def test_missing_datetime_col(self):
         with self.assertRaises(InvalidDataFrameException):
             DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
@@ -1629,6 +1643,16 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         optimizer.set_game_slate_sunday_early()
         lineup = optimizer.optimize_lineup()
         self.assertEqual(0, len(list(filter(lambda p: p.datetime.hour not in [13, 16], lineup.players))))
+
+    def test_game_slate_sunday_and_monday(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 4],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() not in [0, 6], lineup.players))))
+        optimizer.set_game_slate_sunday_and_monday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() not in [0, 6], lineup.players))))
 
     def test_missing_datetime_col(self):
         with self.assertRaises(InvalidDataFrameException):
@@ -2293,6 +2317,16 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         optimizer.set_game_slate_sunday_early()
         lineup = optimizer.optimize_lineup()
         self.assertEqual(0, len(list(filter(lambda p: p.datetime.hour not in [13, 16], lineup.players))))
+
+    def test_game_slate_sunday_and_monday(self):
+        optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 3],
+                                            points_col='yh_points',
+                                            salary_col='yh_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() not in [0, 6], lineup.players))))
+        optimizer.set_game_slate_sunday_and_monday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() not in [0, 6], lineup.players))))
 
     def test_missing_datetime_col(self):
         with self.assertRaises(InvalidDataFrameException):

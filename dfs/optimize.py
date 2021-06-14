@@ -416,6 +416,15 @@ class LineupOptimizer(ABC):
         logger.info('Setting game slate to "Sunday early and late"')
         self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6 and x[y].hour in [13, 16])
 
+    def set_game_slate_sunday_and_monday(self) -> None:
+        """
+        Sets the optimizer to include games taking place on Sunday and Monday.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday and Monday"')
+        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() in [0, 6])
+
     def _set_game_slate(self, game_selector: Callable) -> None:
         """
         Set the game slate to determine which games are to be included in an optimized lineup.
