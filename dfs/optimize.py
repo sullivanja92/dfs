@@ -34,6 +34,7 @@ class OptimizedLineup:
             optimizer.name_col: 'name',
             optimizer.position_col: 'position',
             optimizer.team_col: 'team',
+            optimizer.opponent_col: 'opponent',
             optimizer.points_col: 'points',
             optimizer.salary_col: 'salary',
             optimizer.datetime_col: 'datetime'
@@ -101,11 +102,14 @@ class LineupPlayer:
 
     def __init__(self, player_dict: dict):
         """
-        :param player_dict: the player dict from dataframe
+        Initializer.
+
+        :param player_dict: the player dict corresponding to a row from the dataframe.
         """
         self.name = player_dict['name']
         self.position = player_dict['position']
         self.team = player_dict['team']
+        self.opponent = player_dict['opponent']
         self.points = player_dict['points']
         self.salary = player_dict['salary']
         self.datetime = player_dict['datetime']
@@ -120,16 +124,17 @@ class LineupPlayer:
             'name': self.name,
             'position': self.position,
             'team': self.team,
+            'opponent': self.opponent,
             'points': self.points,
             'salary': self.salary,
             'datetime': str(self.datetime)
         }
 
     def __dir__(self):
-        return ['name', 'position', 'team', 'points', 'salary', 'datetime']
+        return ['name', 'position', 'team', 'opponent', 'points', 'salary', 'datetime']
 
     def __repr__(self):
-        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, team={self.team}, points={self.points}, salary={self.salary}, datetime={self.datetime})"
+        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, team={self.team}, opponent={self.opponent}, points={self.points}, salary={self.salary}, datetime={self.datetime})"
 
     def __str__(self):
         return f"{self.position} {self.name} - {self.team} - {self.points} @ {self.salary}"
@@ -149,6 +154,7 @@ class LineupOptimizer(ABC):
                  position_col: str = 'position',
                  salary_col: str = 'salary',
                  team_col: str = 'team',
+                 opponent_col: str = 'opponent',
                  datetime_col: str = 'datetime',
                  id_col: str = None):
         """
@@ -158,6 +164,7 @@ class LineupOptimizer(ABC):
         :param position_col: The player position column. Default is 'position'.
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
+        :param opponent_col: The player opponent column. Default is 'opponent'.
         :param datetime_col: The datetime column. Default is 'datetime'.
         :param id_col: Optional ID column name.
         """
@@ -175,7 +182,13 @@ class LineupOptimizer(ABC):
                 raise ValueError('Invalid data source file path! csv and xlsx are supported.')
         else:
             raise ValueError('Invalid data source type!')
-        if not all(c in self._data.columns for c in [name_col, points_col, position_col, salary_col, team_col, datetime_col]):
+        if not all(c in self._data.columns for c in [name_col,
+                                                     points_col,
+                                                     position_col,
+                                                     salary_col,
+                                                     team_col,
+                                                     opponent_col,
+                                                     datetime_col]):
             raise InvalidDataFrameException('DataFrame does not contain necessary columns')
         if id_col is not None:
             if len(self._data[id_col].unique()) != len(self._data):
@@ -185,6 +198,7 @@ class LineupOptimizer(ABC):
         self._position_col = position_col
         self._salary_col = salary_col
         self._team_col = team_col
+        self._opponent_col = opponent_col
         self._datetime_col = datetime_col
         self._id_col = id_col
         self._constraints = []
@@ -218,6 +232,10 @@ class LineupOptimizer(ABC):
     @property
     def team_col(self):
         return self._team_col
+
+    @property
+    def opponent_col(self):
+        return self._opponent_col
 
     @property
     def datetime_col(self):
