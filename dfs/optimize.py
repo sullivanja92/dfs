@@ -1,7 +1,7 @@
 import csv
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
@@ -71,6 +71,19 @@ class OptimizedLineup:
                 writer.writeheader()
             writer.writerows([{k: player.__getattribute__(k) for k in dir(player)} for player in self.players])
 
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert this optimized lineup into a dict.
+
+        :return: A dict representing this lineup.
+        """
+        return {
+            'site': self.site,
+            'points': self.points,
+            'salary': self.salary,
+            'players': [p.to_dict() for p in self.players]
+        }
+
     def __repr__(self):
         return f"dfs.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, players={self.players})"
 
@@ -96,6 +109,21 @@ class LineupPlayer:
         self.points = player_dict['points']
         self.salary = player_dict['salary']
         self.datetime = player_dict['datetime']
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Converts this lineup player into a dict.
+
+        :return: A dict representing this player.
+        """
+        return {
+            'name': self.name,
+            'position': self.position,
+            'team': self.team,
+            'points': self.points,
+            'salary': self.salary,
+            'datetime': str(self.datetime)
+        }
 
     def __dir__(self):
         return ['name', 'position', 'team', 'points', 'salary', 'datetime']
