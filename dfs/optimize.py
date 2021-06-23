@@ -8,7 +8,8 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 
 from dfs import constraints
 from dfs import file_utils
-from dfs import positions, data_frame_utils, pulp_utils
+from dfs import data_frame_utils, pulp_utils
+from dfs.positions import RB, WR, TE, FLEX, normalize_position
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class OptimizedLineup:
             optimizer.datetime_col: 'datetime'
         }
         players_dict = players.to_dict('records')
+        position_to_count = dict()
         for p in players_dict:
             for k, v in col_mapping.items():
                 if k is not None:  # id_col may be None
@@ -50,7 +52,19 @@ class OptimizedLineup:
                     keys_to_delete.append(k)
             for k in keys_to_delete:
                 del p[k]
+            if p['position'] in position_to_count:
+                position_to_count[p['position']] = position_to_count[p['position']] + 1
+            else:
+                position_to_count[p['position']] = 1
         self.players = [LineupPlayer(p) for p in players_dict]
+        for position in (RB, WR, TE):
+            _, maximum = optimizer.position_constraints()[position]
+            if position_to_count[position] == maximum:
+                logger.info(f"Flex position for this lineup is filled by {position}")
+                players_for_position = list(sorted(filter(lambda player: player.position == position, self.players),
+                                                   key=lambda x: x.datetime))
+                players_for_position[-1].lineup_position = FLEX
+                break
 
     def write_to_file(self, file_path: str) -> None:
         """
@@ -108,6 +122,7 @@ class LineupPlayer:
         """
         self.name = player_dict['name']
         self.position = player_dict['position']
+        self.lineup_position = player_dict['position']
         self.team = player_dict['team']
         self.opponent = player_dict['opponent']
         self.points = player_dict['points']
@@ -134,10 +149,10 @@ class LineupPlayer:
         return ['name', 'position', 'team', 'opponent', 'points', 'salary', 'datetime']
 
     def __repr__(self):
-        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, team={self.team}, opponent={self.opponent}, points={self.points}, salary={self.salary}, datetime={self.datetime})"
+        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, lineup_position={self.lineup_position}, team={self.team}, opponent={self.opponent}, points={self.points}, salary={self.salary}, datetime={self.datetime})"
 
     def __str__(self):
-        return f"{self.position} {self.name} - {self.team} - {self.points} @ {self.salary}"
+        return f"{self.lineup_position} {self.name} - {self.team} - {self.points} @ {self.salary}"
 
 
 class LineupOptimizer(ABC):
@@ -202,7 +217,7 @@ class LineupOptimizer(ABC):
         self._datetime_col = datetime_col
         self._id_col = id_col
         self._constraints = []
-        self._data[self._position_col] = self._data[self._position_col].apply(lambda x: positions.normalize_position(x))
+        self._data[self._position_col] = self._data[self._position_col].apply(lambda x: normalize_position(x))
         self._data.dropna(inplace=True)
 
     @property
