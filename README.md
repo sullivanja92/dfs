@@ -46,6 +46,4 @@ TODO
 
 ## TODO
 * Add additional fantasy sites
-* Add game schedule-related constraints
 * Implement yahoo single game optimization
-* Configure logging

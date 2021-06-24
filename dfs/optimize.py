@@ -7,10 +7,10 @@ import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 
 from dfs import constraints
-from dfs import file_utils
 from dfs import data_frame_utils, pulp_utils
-from dfs.positions import RB, WR, TE, FLEX, normalize_position
+from dfs import file_utils
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
+from dfs.positions import RB, WR, TE, FLEX, normalize_position
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
