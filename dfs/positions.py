@@ -6,6 +6,7 @@ QB = 'QB'
 RB = 'RB'
 WR = 'WR'
 TE = 'TE'
+FLEX = 'FLEX'
 DST = 'DST'
 
 
