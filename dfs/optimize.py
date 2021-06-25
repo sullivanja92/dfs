@@ -1,7 +1,7 @@
 import csv
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import pandas as pd
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
@@ -9,9 +9,9 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 from dfs import constraints
 from dfs import data_frame_utils, pulp_utils
 from dfs import file_utils
-from dfs.slate import Slate
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from dfs.positions import RB, WR, TE, FLEX, normalize_position
+from dfs.slate import Slate
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
