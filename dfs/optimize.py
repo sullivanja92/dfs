@@ -9,6 +9,7 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 from dfs import constraints
 from dfs import data_frame_utils, pulp_utils
 from dfs import file_utils
+from dfs.slate import Slate
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from dfs.positions import RB, WR, TE, FLEX, normalize_position
 
@@ -138,6 +139,7 @@ class LineupPlayer:
         return {
             'name': self.name,
             'position': self.position,
+            'lineup_position': self.lineup_position,
             'team': self.team,
             'opponent': self.opponent,
             'points': self.points,
@@ -457,7 +459,7 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday"')
-        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6)
+        self._set_game_slate(slate=Slate.SUNDAY)
 
     def set_game_slate_sunday_early(self) -> None:
         """
@@ -466,7 +468,7 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday early"')
-        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6 and x[y].hour == 13)
+        self._set_game_slate(slate=Slate.SUNDAY_EARLY)
 
     def set_game_slate_sunday_early_and_late(self) -> None:
         """
@@ -475,7 +477,7 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday early and late"')
-        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() == 6 and x[y].hour in [13, 16])
+        self._set_game_slate(slate=Slate.SUNDAY_EARLY_AND_LATE)
 
     def set_game_slate_sunday_and_monday(self) -> None:
         """
@@ -484,17 +486,17 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday and Monday"')
-        self._set_game_slate(game_selector=lambda x, y: x[y].weekday() in [0, 6])
+        self._set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
 
-    def _set_game_slate(self, game_selector: Callable) -> None:
+    def _set_game_slate(self, slate: Slate) -> None:
         """
         Set the game slate to determine which games are to be included in an optimized lineup.
 
-        :param game_selector: The lambda game selector.
+        :param slate: The game slate to include.
         :return: None
         """
-        logger.warning(f"Setting game slate with selector {game_selector}")
-        self._add_constraint(constraints.GameSlateConstraint(game_selector=game_selector,
+        logger.warning(f"Setting game slate to {slate.name}")
+        self._add_constraint(constraints.GameSlateConstraint(slate=slate,
                                                              datetime_col=self._datetime_col,
                                                              num_players=self.num_players()))
 
