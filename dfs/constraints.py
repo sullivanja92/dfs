@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Callable, List, Tuple, Optional
+from typing import List, Tuple, Optional
 
 import pandas as pd
 from pulp import lpSum, LpAffineExpression
 
 from dfs.positions import QB, RB, WR, TE, DST
+from dfs.slate import Slate
 
 
 class LineupConstraint(ABC):
@@ -456,16 +457,16 @@ class GameSlateConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup should only include players from a specified game slate.
     """
 
-    def __init__(self, game_selector: Callable, datetime_col: str, num_players: int):
+    def __init__(self, slate: Slate, datetime_col: str, num_players: int):
         """
         Initializer
 
-        :param game_selector: the name of the team for which to include this stack
+        :param slate: the game slate to include
         :param datetime_col: the name of the dataframe's team column
         :param num_players: the number of players to include in an optimized lineup
         """
         super().__init__()
-        self.game_selector = game_selector
+        self.slate = slate
         self.datetime_col = datetime_col
         self.num_players = num_players
 
@@ -476,7 +477,7 @@ class GameSlateConstraint(LineupConstraint):
         :param data: the player data frame.
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[data.apply(lambda x: self.game_selector(x, self.datetime_col), axis=1)]['LpVariable']) == self.num_players]
+        return [lpSum(data[data.apply(lambda x: self.slate.filter_function()(x, self.datetime_col), axis=1)]['LpVariable']) == self.num_players]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
