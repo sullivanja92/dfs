@@ -459,7 +459,7 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday"')
-        self._set_game_slate(slate=Slate.SUNDAY)
+        self.set_game_slate(slate=Slate.SUNDAY)
 
     def set_game_slate_sunday_early(self) -> None:
         """
@@ -468,7 +468,7 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday early"')
-        self._set_game_slate(slate=Slate.SUNDAY_EARLY)
+        self.set_game_slate(slate=Slate.SUNDAY_EARLY)
 
     def set_game_slate_sunday_early_and_late(self) -> None:
         """
@@ -477,7 +477,7 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday early and late"')
-        self._set_game_slate(slate=Slate.SUNDAY_EARLY_AND_LATE)
+        self.set_game_slate(slate=Slate.SUNDAY_EARLY_AND_LATE)
 
     def set_game_slate_sunday_and_monday(self) -> None:
         """
@@ -486,9 +486,9 @@ class LineupOptimizer(ABC):
         :return: None
         """
         logger.info('Setting game slate to "Sunday and Monday"')
-        self._set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
+        self.set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
 
-    def _set_game_slate(self, slate: Slate) -> None:
+    def set_game_slate(self, slate: Slate) -> None:
         """
         Set the game slate to determine which games are to be included in an optimized lineup.
 
