@@ -1,9 +1,14 @@
+import logging
 from abc import ABCMeta
 from typing import Dict, Tuple
 
 from dfs import constraints
 from dfs.optimize import LineupOptimizer
 from dfs.positions import QB, RB, WR, TE, DST
+from dfs.slate import Slate
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
@@ -52,6 +57,42 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         self._add_constraint(constraints.RbDstStackConstraint(team=team,
                                                               team_col=self._team_col,
                                                               position_col=self.position_col))
+
+    def set_game_slate_sunday(self) -> None:
+        """
+        Sets the optimizer to include all Sunday games only.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday"')
+        self.set_game_slate(slate=Slate.SUNDAY)
+
+    def set_game_slate_sunday_early(self) -> None:
+        """
+        Sets the optimizer to include only Sunday early games (13PM EST).
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday early"')
+        self.set_game_slate(slate=Slate.SUNDAY_EARLY)
+
+    def set_game_slate_sunday_early_and_late(self) -> None:
+        """
+        Sets the optimizer to include only Sunday early and late games (13PM and 16PM EST).
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday early and late"')
+        self.set_game_slate(slate=Slate.SUNDAY_EARLY_AND_LATE)
+
+    def set_game_slate_sunday_and_monday(self) -> None:
+        """
+        Sets the optimizer to include games taking place on Sunday and Monday.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Sunday and Monday"')
+        self.set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
 
 
 class DraftKingsNflLineupOptimizer(NflLineupOptimizer):

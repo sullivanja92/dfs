@@ -452,42 +452,6 @@ class LineupOptimizer(ABC):
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
 
-    def set_game_slate_sunday(self) -> None:
-        """
-        Sets the optimizer to include all Sunday games only.
-
-        :return: None
-        """
-        logger.info('Setting game slate to "Sunday"')
-        self.set_game_slate(slate=Slate.SUNDAY)
-
-    def set_game_slate_sunday_early(self) -> None:
-        """
-        Sets the optimizer to include only Sunday early games (13PM EST).
-
-        :return: None
-        """
-        logger.info('Setting game slate to "Sunday early"')
-        self.set_game_slate(slate=Slate.SUNDAY_EARLY)
-
-    def set_game_slate_sunday_early_and_late(self) -> None:
-        """
-        Sets the optimizer to include only Sunday early and late games (13PM and 16PM EST).
-
-        :return: None
-        """
-        logger.info('Setting game slate to "Sunday early and late"')
-        self.set_game_slate(slate=Slate.SUNDAY_EARLY_AND_LATE)
-
-    def set_game_slate_sunday_and_monday(self) -> None:
-        """
-        Sets the optimizer to include games taking place on Sunday and Monday.
-
-        :return: None
-        """
-        logger.info('Setting game slate to "Sunday and Monday"')
-        self.set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
-
     def set_game_slate(self, slate: Slate) -> None:
         """
         Set the game slate to determine which games are to be included in an optimized lineup.
