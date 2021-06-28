@@ -341,6 +341,10 @@ class TestNflLineupOptimizer(ABC):
     def test_flex_position(self):
         pass
 
+    @abstractmethod
+    def test_slate_monday(self):
+        pass
+
     @staticmethod
     def change_position(position: str) -> str:
         """
@@ -1027,6 +1031,16 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         self.assertTrue(sorted(list(filter(lambda x: x.position == 'WR', lineup.players)),
                                key=lambda x: x.datetime)[-1].lineup_position == 'FLEX')
 
+    def test_slate_monday(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))
+        optimizer.set_game_slate_monday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))
+
 
 class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
 
@@ -1692,6 +1706,16 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         self.assertEqual(1, len(list(filter(lambda x: x.lineup_position == 'FLEX', lineup.players))))
         self.assertTrue(sorted(list(filter(lambda x: x.position == 'WR', lineup.players)),
                                key=lambda x: x.datetime)[-1].lineup_position == 'FLEX')
+
+    def test_slate_monday(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))
+        optimizer.set_game_slate_monday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))
 
 
 class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
@@ -2376,3 +2400,13 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         self.assertEqual(1, len(list(filter(lambda x: x.lineup_position == 'FLEX', lineup.players))))
         self.assertTrue(sorted(list(filter(lambda x: x.position == 'WR', lineup.players)),
                                key=lambda x: x.datetime)[-1].lineup_position == 'FLEX')
+
+    def test_slate_monday(self):
+        optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                            points_col='yh_points',
+                                            salary_col='yh_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))
+        optimizer.set_game_slate_monday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))

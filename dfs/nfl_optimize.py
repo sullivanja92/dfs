@@ -94,6 +94,15 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         logger.info('Setting game slate to "Sunday and Monday"')
         self.set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
 
+    def set_game_slate_monday(self) -> None:
+        """
+        Sets the optimizer to include games taking place on Monday.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Monday"')
+        self.set_game_slate(slate=Slate.MONDAY)
+
 
 class DraftKingsNflLineupOptimizer(NflLineupOptimizer):
     """

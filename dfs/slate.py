@@ -12,6 +12,7 @@ class Slate(Enum):
     SUNDAY_AND_MONDAY = 2
     SUNDAY_EARLY = 3
     SUNDAY_EARLY_AND_LATE = 4
+    MONDAY = 5
 
     def filter_function(self) -> Callable:
         """
@@ -24,5 +25,6 @@ class Slate(Enum):
             1: lambda x, y: x[y].weekday() == 6,
             2: lambda x, y: x[y].weekday() in [0, 6],
             3: lambda x, y: x[y].weekday() == 6 and x[y].hour == 13,
-            4: lambda x, y: x[y].weekday() == 6 and x[y].hour in [13, 16]
+            4: lambda x, y: x[y].weekday() == 6 and x[y].hour in [13, 16],
+            5: lambda x, y: x[y].weekday() == 0
         }.get(self.value)
