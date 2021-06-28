@@ -16,8 +16,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
     An abstract subclass of LineupOptimizer containing NFL-specific constraints.
     """
 
-    # TODO: make specified team optional
-    def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:
+    def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:  # TODO: make specified team optional
         """
         Specifies that an optimized lineup should include a QB/receiver stack from a given team.
         The method allows specifying either the receiver position or the number of receivers to include, but not both.
@@ -43,8 +42,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
                                                                    team_col=self._team_col,
                                                                    position_col=self._position_col))
 
-    # TODO: make specified team optional
-    def set_rb_dst_stack(self, team: str) -> None:
+    def set_rb_dst_stack(self, team: str) -> None:  # TODO: make specified team optional
         """
         Specifies that an optimized lineup should include a RB/DST stack from a given team.
 
@@ -103,6 +101,18 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         logger.info('Setting game slate to "Monday"')
         self.set_game_slate(slate=Slate.MONDAY)
 
+    def set_game_slate_monday_and_thursday(self) -> None:  # TODO: DK only?
+        """
+        Sets the optimizer to include games taking place on Monday of week n and Thursday of week n+1.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Monday and Thursday"')
+        weeks = tuple(self.data[self.week_col].unique())
+        if len(weeks) != 2:
+            raise ValueError('DataFrame must contain two weeks in order to use Monday/Thursday slate')
+        self.set_game_slate(slate=Slate.MONDAY_AND_THURSDAY)
+
 
 class DraftKingsNflLineupOptimizer(NflLineupOptimizer):
     """
@@ -152,10 +162,9 @@ class FanDuelNflLineupOptimizer(NflLineupOptimizer):
         }
 
 
-class YahooNflLineupOptimizer(NflLineupOptimizer):
+class YahooNflLineupOptimizer(NflLineupOptimizer):  # TODO: implement single game
     """
     A lineup optimizer for Yahoo salary cap-based NFL lineup optimization.
-    # TODO: implement single game
     """
 
     def num_players(self) -> int:

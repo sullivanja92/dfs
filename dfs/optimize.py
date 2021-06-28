@@ -167,8 +167,10 @@ class LineupOptimizer(ABC):
     def __init__(self,
                  data_source: Union[pd.DataFrame, str],
                  name_col: str = 'name',
-                 points_col: str = 'points',
                  position_col: str = 'position',
+                 year_col: str = 'year',
+                 week_col: str = 'week',
+                 points_col: str = 'points',
                  salary_col: str = 'salary',
                  team_col: str = 'team',
                  opponent_col: str = 'opponent',
@@ -177,8 +179,10 @@ class LineupOptimizer(ABC):
         """
         :param data_source: A dataframe or file path containing fantasy data.
         :param name_col: The player name column. Default is 'name'.
-        :param points_col: The fantasy points column. Default is 'points'.
         :param position_col: The player position column. Default is 'position'.
+        :param year_col: The year column. Default is 'year'.
+        :param week_col: The week column. Default is 'week'.
+        :param points_col: The fantasy points column. Default is 'points'.
         :param salary_col: The player salary column. Default is 'salary'.
         :param team_col: The player team column. Default is 'team'.
         :param opponent_col: The player opponent column. Default is 'opponent'.
@@ -200,8 +204,10 @@ class LineupOptimizer(ABC):
         else:
             raise ValueError('Invalid data source type!')
         if not all(c in self._data.columns for c in [name_col,
-                                                     points_col,
                                                      position_col,
+                                                     year_col,
+                                                     week_col,
+                                                     points_col,
                                                      salary_col,
                                                      team_col,
                                                      opponent_col,
@@ -211,8 +217,10 @@ class LineupOptimizer(ABC):
             if len(self._data[id_col].unique()) != len(self._data):
                 raise InvalidDataFrameException('Provided ID column must be unique for each row')
         self._name_col = name_col
-        self._points_col = points_col
+        self._year_col = year_col
+        self._week_col = week_col
         self._position_col = position_col
+        self._points_col = points_col
         self._salary_col = salary_col
         self._team_col = team_col
         self._opponent_col = opponent_col
@@ -235,12 +243,20 @@ class LineupOptimizer(ABC):
         return self._name_col
 
     @property
-    def points_col(self):
-        return self._points_col
-
-    @property
     def position_col(self):
         return self._position_col
+
+    @property
+    def year_col(self):
+        return self._year_col
+
+    @property
+    def week_col(self):
+        return self._week_col
+
+    @property
+    def points_col(self):
+        return self._points_col
 
     @property
     def salary_col(self):
@@ -462,6 +478,7 @@ class LineupOptimizer(ABC):
         logger.warning(f"Setting game slate to {slate.name}")
         self._add_constraint(constraints.GameSlateConstraint(slate=slate,
                                                              datetime_col=self._datetime_col,
+                                                             week_col=self.week_col,
                                                              num_players=self.num_players()))
 
     def _add_constraint(self, constraint: constraints.LineupConstraint) -> None:
