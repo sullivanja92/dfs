@@ -457,17 +457,19 @@ class GameSlateConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup should only include players from a specified game slate.
     """
 
-    def __init__(self, slate: Slate, datetime_col: str, num_players: int):
+    def __init__(self, slate: Slate, datetime_col: str, week_col: str, num_players: int):
         """
         Initializer
 
         :param slate: the game slate to include
         :param datetime_col: the name of the dataframe's team column
+        :param week_col: the name of the dataframe's week column (required for Monday/Thursday slate)
         :param num_players: the number of players to include in an optimized lineup
         """
         super().__init__()
         self.slate = slate
         self.datetime_col = datetime_col
+        self.week_col = week_col
         self.num_players = num_players
 
     def apply(self, data: pd.DataFrame) -> List[LpAffineExpression]:
@@ -477,7 +479,8 @@ class GameSlateConstraint(LineupConstraint):
         :param data: the player data frame.
         :return: An LpAffineExpression to be added to the LpProblem.
         """
-        return [lpSum(data[data.apply(lambda x: self.slate.filter_function()(x, self.datetime_col), axis=1)]['LpVariable']) == self.num_players]
+        weeks = data[self.week_col].unique()
+        return [lpSum(data[data.apply(lambda x: self.slate.filter_function()(x, self.datetime_col, self.week_col, weeks), axis=1)]['LpVariable']) == self.num_players]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """

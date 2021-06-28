@@ -12,6 +12,8 @@ class Slate(Enum):
     SUNDAY_AND_MONDAY = 2
     SUNDAY_EARLY = 3
     SUNDAY_EARLY_AND_LATE = 4
+    MONDAY = 5
+    MONDAY_AND_THURSDAY = 6
 
     def filter_function(self) -> Callable:
         """
@@ -20,9 +22,11 @@ class Slate(Enum):
         :return: A lambda that may be used to filter the stats dataframe.
         """
         return {
-            0: lambda x, y: True,
-            1: lambda x, y: x[y].weekday() == 6,
-            2: lambda x, y: x[y].weekday() in [0, 6],
-            3: lambda x, y: x[y].weekday() == 6 and x[y].hour == 13,
-            4: lambda x, y: x[y].weekday() == 6 and x[y].hour in [13, 16]
+            0: lambda x, y, *_: True,
+            1: lambda x, y, *_: x[y].weekday() == 6,
+            2: lambda x, y, *_: x[y].weekday() in [0, 6],
+            3: lambda x, y, *_: x[y].weekday() == 6 and x[y].hour == 13,
+            4: lambda x, y, *_: x[y].weekday() == 6 and x[y].hour in [13, 16],
+            5: lambda x, y, *_: x[y].weekday() == 0,
+            6: lambda x, y, week_col, weeks: (x[week_col] == weeks[0] and x[y].weekday() == 0) or (x[week_col] == weeks[1] and x[y].weekday() == 3)
         }.get(self.value)
