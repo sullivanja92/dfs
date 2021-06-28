@@ -1,10 +1,13 @@
 import logging
 from abc import ABCMeta
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
+
+import pandas as pd
 
 from dfs import constraints
 from dfs.optimize import LineupOptimizer
 from dfs.positions import QB, RB, WR, TE, DST
+from dfs.site import Site
 from dfs.slate import Slate
 
 logger = logging.getLogger(__name__)
@@ -184,3 +187,18 @@ class YahooNflLineupOptimizer(NflLineupOptimizer):  # TODO: implement single gam
             TE: (1, 2),
             DST: (1, 1)
         }
+
+
+def optimizer_factory(site: Site, data: Union[pd.DataFrame, str]) -> NflLineupOptimizer:
+    """
+    Return a lineup optimizer for a particular DFS site.
+
+    :param site: the DFS site.
+    :param data: the optimizer data source.
+    :return: an NflLineupOptimizer for the given site.
+    """
+    return {
+        Site.DRAFTKINGS: DraftKingsNflLineupOptimizer(data_source=data, points_col='dk_points', salary_col='dk_salary'),
+        Site.FANDUEL: FanDuelNflLineupOptimizer(data_source=data, points_col='fd_points', salary_col='fd_salary'),
+        Site.YAHOO: YahooNflLineupOptimizer(data_source=data, points_col='yh_points', salary_col='yh_salary')
+    }.get(site, None)
