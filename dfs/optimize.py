@@ -66,6 +66,7 @@ class OptimizedLineup:
                                                    key=lambda x: x.datetime))
                 players_for_position[-1].lineup_position = FLEX
                 break
+        self.players = sorted(self.players, key=lambda x: optimizer.player_order_dict()[x.lineup_position])
 
     def write_to_file(self, file_path: str) -> None:
         """
@@ -308,6 +309,15 @@ class LineupOptimizer(ABC):
         included in the optimized lineup. Ex. { RB : (2, 3) ... }
 
         :return: A dict mapping position name to min/max count.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def player_order_dict(self) -> Dict[str, int]:
+        """
+        Return a mapping of position to lineup order that is used to order players in an optimized lineup.
+
+        :return: the mapping of position to optimized lineup order.
         """
         raise NotImplementedError
 

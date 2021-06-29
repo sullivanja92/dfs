@@ -9,6 +9,15 @@ TE = 'TE'
 FLEX = 'FLEX'
 DST = 'DST'
 
+ORDER_DICT = {
+    QB: 0,
+    RB: 1,
+    WR: 2,
+    TE: 3,
+    FLEX: 4,
+    DST: 5
+}
+
 
 def normalize_position(position: str) -> Optional[str]:
     """
