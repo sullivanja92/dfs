@@ -1,4 +1,4 @@
-from typing import Callable
+import pandas as pd
 
 from dfs.slate import GameSlate
 
@@ -11,8 +11,8 @@ class NflAllGameSlate(GameSlate):
     def name(self) -> str:
         return 'all'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, *_: True
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return True
 
 
 class NflSundayGameSlate(GameSlate):
@@ -23,8 +23,8 @@ class NflSundayGameSlate(GameSlate):
     def name(self) -> str:
         return 'sunday'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, *_: x[y].weekday() == 6
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return row[label].weekday() == 6
 
 
 class NflSundayAndMondayGameSlate(GameSlate):
@@ -35,8 +35,8 @@ class NflSundayAndMondayGameSlate(GameSlate):
     def name(self) -> str:
         return 'sunday_and_monday'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, *_: x[y].weekday() in [0, 6]
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return row[label].weekday() in [0, 6]
 
 
 class NflSundayEarlyGameSlate(GameSlate):
@@ -47,8 +47,8 @@ class NflSundayEarlyGameSlate(GameSlate):
     def name(self) -> str:
         return 'sunday_early'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, *_: x[y].weekday() == 6 and x[y].hour == 13
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return row[label].weekday() == 6 and row[label].hour == 13
 
 
 class NflSundayEarlyAndLateGameSlate(GameSlate):
@@ -59,8 +59,8 @@ class NflSundayEarlyAndLateGameSlate(GameSlate):
     def name(self) -> str:
         return 'sunday_early_and_late'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, *_: x[y].weekday() == 6 and x[y].hour in [13, 16]
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return row[label].weekday() == 6 and row[label].hour in [13, 16]
 
 
 class NflMondayGameSlate(GameSlate):
@@ -71,8 +71,8 @@ class NflMondayGameSlate(GameSlate):
     def name(self) -> str:
         return 'monday'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, *_: x[y].weekday() == 0
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return row[label].weekday() == 0
 
 
 class NflMondayAndThursdayGameSlate(GameSlate):
@@ -83,5 +83,8 @@ class NflMondayAndThursdayGameSlate(GameSlate):
     def name(self) -> str:
         return 'monday_and_thursday'
 
-    def filter_function(self) -> Callable:
-        return lambda x, y, week_col, weeks: (x[week_col] == weeks[0] and x[y].weekday() == 0) or (x[week_col] == weeks[1] and x[y].weekday() == 3)
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        week_col = args[0]
+        weeks = args[1]
+        return (row[week_col] == weeks[0] and row[label].weekday == 0) or \
+               (row[week_col] == weeks[1] and row[label].weekday() == 3)

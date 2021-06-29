@@ -480,7 +480,8 @@ class GameSlateConstraint(LineupConstraint):
         :return: An LpAffineExpression to be added to the LpProblem.
         """
         weeks = data[self.week_col].unique()
-        return [lpSum(data[data.apply(lambda x: self.slate.filter_function()(x, self.datetime_col, self.week_col, weeks), axis=1)]['LpVariable']) == self.num_players]
+        return [lpSum(data[data.apply(lambda x: self.slate.filter_function(x, self.datetime_col, self.week_col, weeks),
+                                      axis=1)]['LpVariable']) == self.num_players]
 
     def is_valid(self, constraints: List['LineupConstraint']) -> Tuple[bool, Optional[str]]:
         """
