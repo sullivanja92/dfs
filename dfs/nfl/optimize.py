@@ -6,8 +6,8 @@ import pandas as pd
 
 from dfs.nfl import constraints as nfl_constraints
 from dfs.nfl import slate
+from dfs.nfl.positions import QB, RB, WR, TE, DST, ORDER_DICT
 from dfs.optimize import LineupOptimizer
-from dfs.nfl.positions import QB, RB, WR, TE, DST
 from dfs.site import Site
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,9 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
     """
     An abstract subclass of LineupOptimizer containing NFL-specific constraints.
     """
+
+    def player_order_dict(self) -> Dict[str, int]:
+        return ORDER_DICT
 
     def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:  # TODO: make specified team optional
         """
