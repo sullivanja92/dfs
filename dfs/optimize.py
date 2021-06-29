@@ -10,7 +10,7 @@ from dfs import constraints
 from dfs import data_frame_utils, pulp_utils
 from dfs import file_utils
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
-from dfs.positions import RB, WR, TE, FLEX, normalize_position
+from dfs.nfl.positions import RB, WR, TE, FLEX, normalize_position
 from dfs.slate import GameSlate
 
 logger = logging.getLogger(__name__)

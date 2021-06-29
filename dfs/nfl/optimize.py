@@ -7,7 +7,7 @@ import pandas as pd
 from dfs.nfl import constraints as nfl_constraints
 from dfs.nfl import slate
 from dfs.optimize import LineupOptimizer
-from dfs.positions import QB, RB, WR, TE, DST
+from dfs.nfl.positions import QB, RB, WR, TE, DST
 from dfs.site import Site
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ import pandas as pd
 from pulp import lpSum, LpAffineExpression
 
 from dfs import constraints as c
-from dfs.positions import QB, RB, WR, TE, DST
+from dfs.nfl.positions import QB, RB, WR, TE, DST
 
 
 class QbReceiverStackConstraint(c.LineupConstraint):

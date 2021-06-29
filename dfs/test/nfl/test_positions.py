@@ -1,6 +1,6 @@
 import unittest
 
-from dfs.positions import normalize_position, QB, RB, WR, TE, DST
+from dfs.nfl.positions import normalize_position, QB, RB, WR, TE, DST
 
 
 class TestPositions(unittest.TestCase):

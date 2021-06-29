@@ -1,6 +1,6 @@
 import unittest
 
-from dfs import data
+from dfs.nfl import data
 
 
 class TestData(unittest.TestCase):

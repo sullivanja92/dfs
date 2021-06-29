@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from abc import ABC, abstractmethod
 
-from dfs import data
+from dfs.nfl import data
 from dfs.exceptions import InvalidConstraintException, InvalidDataFrameException
 from dfs.nfl.optimize import DraftKingsNflLineupOptimizer, FanDuelNflLineupOptimizer, YahooNflLineupOptimizer
 
