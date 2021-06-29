@@ -1,32 +1,26 @@
-from enum import Enum
+from abc import ABC, abstractmethod
 from typing import Callable
 
 
-class Slate(Enum):
+class GameSlate(ABC):
     """
-    Enumeration of game slates that may be included in lineup optimization.
+    Abstract class used to specify a slate of games that are to be considered for a lineup.
     """
 
-    ALL = 0
-    SUNDAY = 1
-    SUNDAY_AND_MONDAY = 2
-    SUNDAY_EARLY = 3
-    SUNDAY_EARLY_AND_LATE = 4
-    MONDAY = 5
-    MONDAY_AND_THURSDAY = 6
+    @abstractmethod
+    def name(self) -> str:
+        """
+        Returns the name of this game slate.
 
+        :return: the slate name.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def filter_function(self) -> Callable:
         """
-        Returns a lambda that may be used to filter the player stats dataframe by a particular game slate.
+        Returns a callable that may be used to filter the player dataframe based on this slate.
 
-        :return: A lambda that may be used to filter the stats dataframe.
+        :return: the callable that may be used to filter the dataframe.
         """
-        return {
-            0: lambda x, y, *_: True,
-            1: lambda x, y, *_: x[y].weekday() == 6,
-            2: lambda x, y, *_: x[y].weekday() in [0, 6],
-            3: lambda x, y, *_: x[y].weekday() == 6 and x[y].hour == 13,
-            4: lambda x, y, *_: x[y].weekday() == 6 and x[y].hour in [13, 16],
-            5: lambda x, y, *_: x[y].weekday() == 0,
-            6: lambda x, y, week_col, weeks: (x[week_col] == weeks[0] and x[y].weekday() == 0) or (x[week_col] == weeks[1] and x[y].weekday() == 3)
-        }.get(self.value)
+        raise NotImplementedError()

@@ -11,7 +11,7 @@ from dfs import data_frame_utils, pulp_utils
 from dfs import file_utils
 from dfs.exceptions import InvalidDataFrameException, UnsolvableLineupException, InvalidConstraintException
 from dfs.positions import RB, WR, TE, FLEX, normalize_position
-from dfs.slate import Slate
+from dfs.slate import GameSlate
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -468,7 +468,7 @@ class LineupOptimizer(ABC):
         self._add_constraint(constraints.MinSalaryCapConstraint(salary=n,
                                                                 salary_col=self._salary_col))
 
-    def set_game_slate(self, slate: Slate) -> None:
+    def set_game_slate(self, slate: GameSlate) -> None:
         """
         Set the game slate to determine which games are to be included in an optimized lineup.
 

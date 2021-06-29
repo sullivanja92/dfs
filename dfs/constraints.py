@@ -5,7 +5,7 @@ import pandas as pd
 from pulp import lpSum, LpAffineExpression
 
 from dfs.positions import QB, RB, WR, TE, DST
-from dfs.slate import Slate
+from dfs.slate import GameSlate
 
 
 class LineupConstraint(ABC):
@@ -457,7 +457,7 @@ class GameSlateConstraint(LineupConstraint):
     A constraint specifying that an optimized lineup should only include players from a specified game slate.
     """
 
-    def __init__(self, slate: Slate, datetime_col: str, week_col: str, num_players: int):
+    def __init__(self, slate: GameSlate, datetime_col: str, week_col: str, num_players: int):
         """
         Initializer
 

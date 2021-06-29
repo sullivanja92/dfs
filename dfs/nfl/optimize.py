@@ -5,10 +5,10 @@ from typing import Dict, Tuple, Union
 import pandas as pd
 
 from dfs import constraints
+from dfs.nfl import slate
 from dfs.optimize import LineupOptimizer
 from dfs.positions import QB, RB, WR, TE, DST
 from dfs.site import Site
-from dfs.slate import Slate
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -66,7 +66,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         :return: None
         """
         logger.info('Setting game slate to "Sunday"')
-        self.set_game_slate(slate=Slate.SUNDAY)
+        self.set_game_slate(slate=slate.NflSundayGameSlate())
 
     def set_game_slate_sunday_early(self) -> None:
         """
@@ -75,7 +75,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         :return: None
         """
         logger.info('Setting game slate to "Sunday early"')
-        self.set_game_slate(slate=Slate.SUNDAY_EARLY)
+        self.set_game_slate(slate=slate.NflSundayEarlyGameSlate())
 
     def set_game_slate_sunday_early_and_late(self) -> None:
         """
@@ -84,7 +84,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         :return: None
         """
         logger.info('Setting game slate to "Sunday early and late"')
-        self.set_game_slate(slate=Slate.SUNDAY_EARLY_AND_LATE)
+        self.set_game_slate(slate=slate.NflSundayEarlyAndLateGameSlate())
 
     def set_game_slate_sunday_and_monday(self) -> None:
         """
@@ -93,7 +93,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         :return: None
         """
         logger.info('Setting game slate to "Sunday and Monday"')
-        self.set_game_slate(slate=Slate.SUNDAY_AND_MONDAY)
+        self.set_game_slate(slate=slate.NflSundayAndMondayGameSlate())
 
     def set_game_slate_monday(self) -> None:
         """
@@ -102,7 +102,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         :return: None
         """
         logger.info('Setting game slate to "Monday"')
-        self.set_game_slate(slate=Slate.MONDAY)
+        self.set_game_slate(slate=slate.NflMondayGameSlate())
 
     def set_game_slate_monday_and_thursday(self) -> None:  # TODO: DK only?
         """
@@ -114,7 +114,7 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         weeks = tuple(self.data[self.week_col].unique())
         if len(weeks) != 2:
             raise ValueError('DataFrame must contain two weeks in order to use Monday/Thursday slate')
-        self.set_game_slate(slate=Slate.MONDAY_AND_THURSDAY)
+        self.set_game_slate(slate=slate.NflMondayAndThursdayGameSlate())
 
 
 class DraftKingsNflLineupOptimizer(NflLineupOptimizer):
