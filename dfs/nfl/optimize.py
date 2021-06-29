@@ -4,7 +4,7 @@ from typing import Dict, Tuple, Union
 
 import pandas as pd
 
-from dfs import constraints
+from dfs.nfl import constraints as nfl_constraints
 from dfs.nfl import slate
 from dfs.optimize import LineupOptimizer
 from dfs.positions import QB, RB, WR, TE, DST
@@ -39,11 +39,11 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         # max_receivers = None  # TODO: implement this when refactoring to optimizers for specific sites
         # if num_receivers > max_receivers:
         #     pass
-        self._add_constraint(constraints.QbReceiverStackConstraint(team=team,
-                                                                   position=position,
-                                                                   num_receivers=num_receivers,
-                                                                   team_col=self._team_col,
-                                                                   position_col=self._position_col))
+        self._add_constraint(nfl_constraints.QbReceiverStackConstraint(team=team,
+                                                                       position=position,
+                                                                       num_receivers=num_receivers,
+                                                                       team_col=self._team_col,
+                                                                       position_col=self._position_col))
 
     def set_rb_dst_stack(self, team: str) -> None:  # TODO: make specified team optional
         """
@@ -55,9 +55,9 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
         """
         if team is None or team not in self._data[self._team_col].unique():
             raise ValueError('Invalid team name')
-        self._add_constraint(constraints.RbDstStackConstraint(team=team,
-                                                              team_col=self._team_col,
-                                                              position_col=self.position_col))
+        self._add_constraint(nfl_constraints.RbDstStackConstraint(team=team,
+                                                                  team_col=self._team_col,
+                                                                  position_col=self.position_col))
 
     def set_game_slate_sunday(self) -> None:
         """
