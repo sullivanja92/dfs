@@ -1,32 +1,30 @@
-from enum import Enum
-from typing import Callable
+from abc import ABC, abstractmethod
+
+import pandas as pd
 
 
-class Slate(Enum):
+class GameSlate(ABC):
     """
-    Enumeration of game slates that may be included in lineup optimization.
+    Abstract class used to specify a slate of games that are to be considered for a lineup.
     """
 
-    ALL = 0
-    SUNDAY = 1
-    SUNDAY_AND_MONDAY = 2
-    SUNDAY_EARLY = 3
-    SUNDAY_EARLY_AND_LATE = 4
-    MONDAY = 5
-    MONDAY_AND_THURSDAY = 6
-
-    def filter_function(self) -> Callable:
+    @abstractmethod
+    def name(self) -> str:
         """
-        Returns a lambda that may be used to filter the player stats dataframe by a particular game slate.
+        Returns the name of this game slate.
 
-        :return: A lambda that may be used to filter the stats dataframe.
+        :return: the slate name.
         """
-        return {
-            0: lambda x, y, *_: True,
-            1: lambda x, y, *_: x[y].weekday() == 6,
-            2: lambda x, y, *_: x[y].weekday() in [0, 6],
-            3: lambda x, y, *_: x[y].weekday() == 6 and x[y].hour == 13,
-            4: lambda x, y, *_: x[y].weekday() == 6 and x[y].hour in [13, 16],
-            5: lambda x, y, *_: x[y].weekday() == 0,
-            6: lambda x, y, week_col, weeks: (x[week_col] == weeks[0] and x[y].weekday() == 0) or (x[week_col] == weeks[1] and x[y].weekday() == 3)
-        }.get(self.value)
+        raise NotImplementedError()
+
+    @abstractmethod
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        """
+        Returns a bool that may be used to filter the player dataframe based on this slate.
+
+        :param row: the player dataframe row
+        :param label: the dataframe's datetime column
+        :param args: a list of args (used in Monday/Thursday NFL slate for week-related args)
+        :return: the bool indicating whether or not a row should be included based on this slate.
+        """
+        raise NotImplementedError()
