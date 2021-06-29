@@ -86,5 +86,5 @@ class NflMondayAndThursdayGameSlate(GameSlate):
     def filter_function(self, row: pd.Series, label: str, *args) -> bool:
         week_col = args[0]
         weeks = args[1]
-        return (row[week_col] == weeks[0] and row[label].weekday == 0) or \
+        return (row[week_col] == weeks[0] and row[label].weekday() == 0) or \
                (row[week_col] == weeks[1] and row[label].weekday() == 3)
