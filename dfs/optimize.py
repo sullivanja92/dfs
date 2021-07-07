@@ -230,6 +230,7 @@ class LineupOptimizer(ABC):
         self._constraints = []
         self._data[self._position_col] = self._data[self._position_col].apply(lambda x: normalize_position(x))
         self._data.dropna(inplace=True)
+        self._data = self._data[self._data[self._salary_col] > 0]
 
     @property
     def data(self):

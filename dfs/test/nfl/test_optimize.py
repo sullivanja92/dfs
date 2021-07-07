@@ -926,8 +926,8 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
         den_players = list(filter(lambda p: p.team == 'DEN', lineup.players))
         self.assertTrue(len(den_players) == 3)
         self.assertTrue(den_players[0].position == 'QB')
-        self.assertTrue(den_players[1].position == 'WR')
-        self.assertTrue(den_players[2].position == 'TE')
+        self.assertTrue(den_players[1].position == 'TE')
+        self.assertTrue(den_players[2].position == 'WR')
 
     def test_qb_receiver_stack_num_receivers_and_position(self):
         optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 3],
