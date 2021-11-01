@@ -22,10 +22,11 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
     def player_order_dict(self) -> Dict[str, int]:
         return ORDER_DICT
 
-    def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:  # TODO: make specified team optional
+    def set_qb_receiver_stack(self, team: str, position: str = None, num_receivers: int = None) -> None:
         """
         Specifies that an optimized lineup should include a QB/receiver stack from a given team.
         The method allows specifying either the receiver position or the number of receivers to include, but not both.
+        # TODO: make specified team optional
 
         :param team: the team name
         :param position: the position - WR or TE - to include. This is optional.
