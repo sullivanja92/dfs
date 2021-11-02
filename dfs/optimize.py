@@ -102,7 +102,7 @@ class OptimizedLineup:
         }
 
     def __repr__(self):
-        return f"dfs.optimize.OptimizedLineup(site={self.site}, points={self.points}, salary={self.salary}, players={self.players})"
+        return f"dfs.optimize.OptimizedLineup({self.to_dict()})"
 
     def __str__(self):
         players_string = '\n'.join([str(p) for p in self.players])
@@ -152,7 +152,7 @@ class LineupPlayer:
         return ['name', 'position', 'team', 'opponent', 'points', 'salary', 'datetime']
 
     def __repr__(self):
-        return f"dfs.optimize.LineupPlayer(name={self.name}, position={self.position}, lineup_position={self.lineup_position}, team={self.team}, opponent={self.opponent}, points={self.points}, salary={self.salary}, datetime={self.datetime})"
+        return f"dfs.optimize.LineupPlayer({self.to_dict()})"
 
     def __str__(self):
         return f"{self.lineup_position} {self.name} - {self.team} - {self.points} @ {self.salary}"
@@ -233,47 +233,47 @@ class LineupOptimizer(ABC):
         self._data = self._data[self._data[self._salary_col] > 0]
 
     @property
-    def data(self):
+    def data(self) -> pd.DataFrame:
         return self._data
 
     @property
-    def id_col(self):
+    def id_col(self) -> str:
         return self._id_col
 
     @property
-    def name_col(self):
+    def name_col(self) -> str:
         return self._name_col
 
     @property
-    def position_col(self):
+    def position_col(self) -> str:
         return self._position_col
 
     @property
-    def year_col(self):
+    def year_col(self) -> str:
         return self._year_col
 
     @property
-    def week_col(self):
+    def week_col(self) -> str:
         return self._week_col
 
     @property
-    def points_col(self):
+    def points_col(self) -> str:
         return self._points_col
 
     @property
-    def salary_col(self):
+    def salary_col(self) -> str:
         return self._salary_col
 
     @property
-    def team_col(self):
+    def team_col(self) -> str:
         return self._team_col
 
     @property
-    def opponent_col(self):
+    def opponent_col(self) -> str:
         return self._opponent_col
 
     @property
-    def datetime_col(self):
+    def datetime_col(self) -> str:
         return self._datetime_col
 
     @abstractmethod
@@ -371,7 +371,7 @@ class LineupOptimizer(ABC):
         if 'id' in kwargs and self._id_col is None:
             raise ValueError('ID column not specified')
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
-        if key is None or key not in self._data[col].unique():
+        if key is None or key not in self.data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
         self._add_constraint(constraints.IncludePlayerConstraint(player=key,
                                                                  name_col=col))
@@ -388,7 +388,7 @@ class LineupOptimizer(ABC):
         if 'id' in kwargs and self._id_col is None:
             raise ValueError('ID column not specified')
         key, col = (kwargs['id'], self._id_col) if 'id' in kwargs else (kwargs['name'], self.name_col)
-        if key is None or key not in self._data[col].unique():
+        if key is None or key not in self.data[col].unique():
             raise ValueError(f"{key} not found in data frame's {col} column")
         self._add_constraint(constraints.ExcludePlayerConstraint(player=key,
                                                                  name_col=col))
@@ -404,7 +404,7 @@ class LineupOptimizer(ABC):
         """
         if n is None or n > self.num_players():
             raise ValueError('Invalid number of players')
-        if team is None or team not in self._data[self._team_col].unique():
+        if team is None or team not in self.data[self._team_col].unique():
             raise ValueError('Invalid team name')
         self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum=n,
                                                                       team=team,
@@ -428,7 +428,7 @@ class LineupOptimizer(ABC):
         """
         if n is None or n < 0:
             raise ValueError('Invalid maximum players')
-        if team is None or team not in self._data[self._team_col].unique():
+        if team is None or team not in self.data[self._team_col].unique():
             raise ValueError('Invalid team name')
         self._add_constraint(constraints.MaxPlayersFromTeamConstraint(maximum=n,
                                                                       team=team,
@@ -445,7 +445,7 @@ class LineupOptimizer(ABC):
         """
         if n is None or n > self.num_players():
             raise ValueError('Invalid minimum number of players')
-        if team is None or team not in self._data[self._team_col].unique():
+        if team is None or team not in self.data[self._team_col].unique():
             raise ValueError('Invalid team name')
         if n == 0:
             return
@@ -529,10 +529,10 @@ class LineupOptimizer(ABC):
                                                                          cat='Binary'), axis=1)
         problem = LpProblem(f"{self.site_name()}LineupOptimization", LpMaximize)
         for k, v in position_constraints.items():
-            players = self._data[self._data[self._position_col] == k]
+            players = self.data[self.data[self._position_col] == k]
             problem += lpSum(players['LpVariable']) >= v[0]
             problem += lpSum(players['LpVariable']) <= v[1]
-        problem += lpSum(self._data[self._points_col] * self._data['LpVariable'])
+        problem += lpSum(self.data[self._points_col] * self.data['LpVariable'])
         problem += constraints.LineupSizeConstraint(self.num_players()).apply(self._data)[0]
         problem += constraints.MaxSalaryCapConstraint(self.salary_cap(), self._salary_col).apply(self._data)[0]
         for constraint in self._constraints:
