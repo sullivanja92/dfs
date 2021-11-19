@@ -31,6 +31,7 @@ class OptimizedLineup:
         players = optimizer.data[optimizer.data.apply(lambda x: x['LpVariable'].varValue == 1, axis=1)]
         self.points = round(players[optimizer.points_col].sum(), 2)
         self.salary = players[optimizer.salary_col].sum()
+        self.salary_cap = optimizer.salary_cap()
         col_mapping = {
             optimizer.id_col: 'id',
             optimizer.name_col: 'name',
@@ -99,7 +100,7 @@ class OptimizedLineup:
             'site': self.site,
             'points': self.points,
             'salary': self.salary,
-
+            'salary_cap': self.salary_cap,
             'players': [p.to_dict() for p in self.players]
         }
 

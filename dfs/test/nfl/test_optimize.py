@@ -353,6 +353,10 @@ class TestNflLineupOptimizer(ABC):
     def test_slate_monday_and_thursday_not_two_weeks(self):
         pass
 
+    @abstractmethod
+    def test_optimized_lineup_salary_cap(self):
+        pass
+
     @staticmethod
     def change_position(position: str) -> str:
         """
@@ -1067,6 +1071,13 @@ class TestDraftKingsNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer
                                                  salary_col='dk_salary')
         self.assertRaises(ValueError, lambda: optimizer.set_game_slate_monday_and_thursday())
 
+    def test_optimized_lineup_salary_cap(self):
+        optimizer = DraftKingsNflLineupOptimizer(self.data[self.data['week'] == 2],
+                                                 points_col='dk_points',
+                                                 salary_col='dk_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(50_000, lineup.salary_cap)
+
 
 class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
 
@@ -1760,6 +1771,13 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
                                               points_col='fd_points',
                                               salary_col='fd_salary')
         self.assertRaises(ValueError, lambda: optimizer.set_game_slate_monday_and_thursday())
+
+    def test_optimized_lineup_salary_cap(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 2],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(60_000, lineup.salary_cap)
 
 
 class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
@@ -2472,3 +2490,10 @@ class TestYahooNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
                                             points_col='yh_points',
                                             salary_col='yh_salary')
         self.assertRaises(ValueError, lambda: optimizer.set_game_slate_monday_and_thursday())
+
+    def test_optimized_lineup_salary_cap(self):
+        optimizer = YahooNflLineupOptimizer(self.data[self.data['week'] == 2],
+                                            points_col='yh_points',
+                                            salary_col='yh_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(200, lineup.salary_cap)
