@@ -39,7 +39,8 @@ class OptimizedLineup:
             optimizer.opponent_col: 'opponent',
             optimizer.points_col: 'points',
             optimizer.salary_col: 'salary',
-            optimizer.datetime_col: 'datetime'
+            optimizer.datetime_col: 'datetime',
+            optimizer.is_home_col: 'is_home'
         }
         players_dict = players.to_dict('records')
         position_to_count = dict()
@@ -98,6 +99,7 @@ class OptimizedLineup:
             'site': self.site,
             'points': self.points,
             'salary': self.salary,
+
             'players': [p.to_dict() for p in self.players]
         }
 
@@ -130,6 +132,7 @@ class LineupPlayer:
         self.points = player_dict['points']
         self.salary = player_dict['salary']
         self.datetime = player_dict['datetime']
+        self.is_home = player_dict['is_home']
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -145,7 +148,8 @@ class LineupPlayer:
             'opponent': self.opponent,
             'points': self.points,
             'salary': self.salary,
-            'datetime': str(self.datetime)
+            'datetime': str(self.datetime),
+            'is_home': self.is_home
         }
 
     def __dir__(self):
@@ -176,6 +180,7 @@ class LineupOptimizer(ABC):
                  team_col: str = 'team',
                  opponent_col: str = 'opponent',
                  datetime_col: str = 'datetime',
+                 is_home_col: str = 'is_home',
                  id_col: str = None):
         """
         :param data_source: A dataframe or file path containing fantasy data.
@@ -188,6 +193,7 @@ class LineupOptimizer(ABC):
         :param team_col: The player team column. Default is 'team'.
         :param opponent_col: The player opponent column. Default is 'opponent'.
         :param datetime_col: The datetime column. Default is 'datetime'.
+        :param is_home_col: The column to indicate whether or not the player is at home. Default is 'is_home'.
         :param id_col: Optional ID column name.
         """
         if type(data_source) is pd.DataFrame:
@@ -212,6 +218,7 @@ class LineupOptimizer(ABC):
                                                      salary_col,
                                                      team_col,
                                                      opponent_col,
+                                                     is_home_col,
                                                      datetime_col]):
             raise InvalidDataFrameException('DataFrame does not contain necessary columns')
         if id_col is not None:
@@ -226,6 +233,7 @@ class LineupOptimizer(ABC):
         self._team_col = team_col
         self._opponent_col = opponent_col
         self._datetime_col = datetime_col
+        self._is_home_col = is_home_col
         self._id_col = id_col
         self._constraints = []
         self._data[self._position_col] = self._data[self._position_col].apply(lambda x: normalize_position(x))
@@ -275,6 +283,10 @@ class LineupOptimizer(ABC):
     @property
     def datetime_col(self) -> str:
         return self._datetime_col
+
+    @property
+    def is_home_col(self) -> str:
+        return self._is_home_col
 
     @abstractmethod
     def num_players(self) -> int:
