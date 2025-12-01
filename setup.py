@@ -14,6 +14,7 @@ setuptools.setup(
     url="https://github.com/sullivanja92/dfs",
     packages=['dfs'],
     install_requires=[
+        'openpyxl',
         'pandas',
         'pulp'
     ],
@@ -22,5 +23,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.9',
 )
