@@ -537,6 +537,7 @@ class LineupOptimizer(ABC):
         """
         position_constraints = self.position_constraints()
         if not data_frame_utils.col_contains_all_values(self._data, self.position_col, position_constraints.keys()):
+            logger.error(f"The {self.position_col} column should contain {position_constraints.keys()} but it contains {self._data[self.position_col].unique()}")
             raise InvalidDataFrameException('Data frame is missing required positions')
         self._data['LpVariable'] = self._data.apply(lambda x: LpVariable(f"{x[self._position_col]}_{x.name}",
                                                                          cat='Binary'), axis=1)
