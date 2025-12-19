@@ -69,6 +69,7 @@ class OptimizedLineup:
                 players_for_position[-1].lineup_position = FLEX
                 break
         self.players = sorted(self.players, key=lambda x: optimizer.player_order_dict()[x.lineup_position])
+        self.data = players.drop(columns=["LpVariable"], axis=1)
 
     def write_to_file(self, file_path: str) -> None:
         """
