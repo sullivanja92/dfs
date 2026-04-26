@@ -88,3 +88,15 @@ class NflMondayAndThursdayGameSlate(GameSlate):
         weeks = args[1]
         return (row[week_col] == weeks[0] and row[label].weekday() == 0) or \
                (row[week_col] == weeks[1] and row[label].weekday() == 3)
+    
+
+class NflThursdayGameSlate(GameSlate):
+    """
+    A game slate used to select Thursday NFL games for a given week.
+    """
+
+    def name(self) -> str:
+        return 'thursday'
+
+    def filter_function(self, row: pd.Series, label: str, *args) -> bool:
+        return row[label].weekday() == 3
