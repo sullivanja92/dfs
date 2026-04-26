@@ -682,6 +682,16 @@ class TestFanDuelNflLineupOptimizer(unittest.TestCase, TestNflLineupOptimizer):
         lineup = optimizer.optimize_lineup()
         self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 0, lineup.players))))
 
+    def test_slate_thursday(self):
+        optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'] == 1],
+                                              points_col='fd_points',
+                                              salary_col='fd_salary')
+        lineup = optimizer.optimize_lineup()
+        self.assertNotEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 3, lineup.players))))
+        optimizer.set_game_slate_thursday()
+        lineup = optimizer.optimize_lineup()
+        self.assertEqual(0, len(list(filter(lambda p: p.datetime.weekday() != 3, lineup.players))))
+
     def test_slate_monday_and_thursday(self):
         optimizer = FanDuelNflLineupOptimizer(self.data[self.data['week'].isin([2, 3])],
                                               points_col='fd_points',

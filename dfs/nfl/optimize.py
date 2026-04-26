@@ -120,6 +120,15 @@ class NflLineupOptimizer(LineupOptimizer, metaclass=ABCMeta):
             raise ValueError('DataFrame must contain two weeks in order to use Monday/Thursday slate')
         self.set_game_slate(slate=slate.NflMondayAndThursdayGameSlate())
 
+    def set_game_slate_thursday(self) -> None:
+        """
+        Sets the optimizer to include games taking place on Thursday.
+
+        :return: None
+        """
+        logger.info('Setting game slate to "Thursday"')
+        self.set_game_slate(slate=slate.NflThursdayGameSlate())
+
 
 class DraftKingsNflLineupOptimizer(NflLineupOptimizer):
     """
