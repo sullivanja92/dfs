@@ -500,7 +500,7 @@ class LineupOptimizer(ABC):
         :param slate: The game slate to include.
         :return: None
         """
-        logger.warning(f"Setting game slate to {slate.name}")
+        logger.warning(f"Setting game slate to {slate.name()}")
         self._add_constraint(constraints.GameSlateConstraint(slate=slate,
                                                              datetime_col=self._datetime_col,
                                                              week_col=self.week_col,
